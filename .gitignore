@@ -1,0 +1,17 @@
+.venv/
+.dok-aco/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+__MACOSX/
+
+experiments/results/
+*.csv
+*.tif
+*.tiff
+*.gpkg
+*.shp
+*.dbf
+*.shx
+*.prj
