@@ -15,3 +15,21 @@ experiments/results/
 *.dbf
 *.shx
 *.prj
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+
+# Generated report PDF
+report/main.pdf
