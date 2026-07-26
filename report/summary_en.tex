@@ -1,0 +1,87 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.75\baselineskip}
+
+\title{Summary: Climate Regionalization of Serbia using Ant Colony Optimization}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Research Goal}
+
+This work develops and evaluates an Ant Colony Optimization (ACO) framework for climate regionalization of Serbia. Climate regionalization divides a geographical area into zones with similar climate characteristics. Such zones are useful in agriculture, forestry, ecology, hydrology, biodiversity conservation, and spatial planning.
+
+The standard reference for climate regionalization is the Köppen-Geiger classification. It is simple, reproducible, and historically important, but it relies on fixed global thresholds. Those thresholds are not optimized for Serbia or for a chosen objective function. The goal of this research is therefore not to replace Köppen-Geiger as a universal classification, but to test whether an optimization-based approach can produce alternative regionalizations that are locally meaningful for Serbia.
+
+In the proposed framework, each ant constructs one candidate regionalization by assigning each spatial unit to one of five climate regions. The number of regions is set to five because five major Köppen classes remain after aggregation to the optimization nodes. Each candidate solution is evaluated with a fitness function that combines climatic compactness and spatial coherence. The algorithm searches for assignments that minimize this objective while later being evaluated against independent land-cover information.
+
+\section*{Data and Preprocessing}
+
+The input climate dataset consists of raster layers over Serbia. The rasters include long-term temperature and precipitation variables: monthly, seasonal, and annual summaries. All raster layers are first aligned to the same spatial grid, so every cell has comparable values for all climate variables. The final table, \texttt{df\_valid.csv}, keeps only cells where all required climate values are available.
+
+The preprocessing pipeline converts this dataframe into a representation used by all clustering methods. It creates a feature matrix, spatial coordinates, node weights, a neighborhood graph, and a mapping between original raster pixels and optimization nodes. This shared representation ensures that differences between results come from the algorithms and not from different preprocessing.
+
+The implementation supports several feature representations. Raw features use all climate variables directly. Köppen-inspired features summarize temperature and precipitation using means, extrema, ranges, and total precipitation. PCA features are also implemented by applying PCA separately to temperature and precipitation variables, although they were not the main focus of the reported experiments. The systematic experiments use Köppen-inspired features.
+
+Two optimization modes are supported. In pixel mode, every valid raster cell is one optimization node. In superpixel mode, neighboring pixels are grouped with MiniBatch KMeans applied to spatial coordinates. Each superpixel becomes one optimization node, its feature vector is the average of the pixels it contains, and its weight is the number of pixels in the superpixel. The reported experiments use superpixels with target size 150. A k-nearest-neighbor graph with 16 neighbors is built over the spatial coordinates of the optimization nodes.
+
+\section*{Optimization Framework}
+
+The core optimizer is implemented as a generic ant-clustering engine. It controls the iteration loop, ant loop, fitness evaluation, pheromone update, logging, and best-solution tracking. The optimizer does not contain a fixed construction strategy. Instead, the construction function, fitness function, pheromone update function, and pheromone initialization function are passed as arguments. This makes it possible to compare several ACO variants under the same experimental conditions.
+
+The pheromone matrix has shape \texttt{number of nodes} by \texttt{number of clusters}. Each entry represents the learned preference for assigning one node to one cluster. At initialization, all assignments have equal pheromone values. During optimization, pheromone evaporation reduces previous preferences and pheromone deposition reinforces assignments found in good solutions.
+
+The fitness function is a weighted sum of two terms:
+\[
+fitness = 0.7 \cdot compactness + 0.3 \cdot spatial\_disagreement.
+\]
+Compactness is the normalized within-cluster variance, calculated using cluster centroids and node weights. Spatial disagreement is the fraction of directed neighbor links whose endpoints have different cluster labels. Lower fitness is better. This objective rewards climatically compact clusters while discouraging highly fragmented maps.
+
+Three pheromone update strategies are tested. The all-ants strategy lets every ant deposit pheromone, with better solutions depositing more. The best-ant strategy reinforces only the best solution in the current batch. The quality-weighted strategy deposits pheromone according to relative solution quality compared with the batch average.
+
+\section*{Construction Strategies}
+
+The project compares several construction strategies. Basic ACO constructs a full solution in one pass. For each node, the assignment probability is the product of pheromone strength and a heuristic score. The centroid variant uses distance to temporary cluster centroids. The cohesion variant uses similarity to already assigned cluster members.
+
+ACO with refinement performs several assignment and centroid-recomputation passes. In the reported experiments, the refinement strategy uses three refinement steps. It can be combined with either the centroid or cohesion heuristic.
+
+The graph-local strategy uses the spatial neighborhood graph. For a node being assigned, it looks at already assigned neighbors and evaluates how similar the node is to neighbors belonging to each possible cluster. Since many neighbors may be unassigned early in construction, this heuristic includes a centroid fallback.
+
+The multi-colony strategy divides ants into groups that use different heuristics while sharing the same pheromone matrix. One tested variant combines centroid, graph-local, and spatial heuristics; another combines cohesion, graph-local, and spatial heuristics. This tests whether different local decision rules can cooperate through shared pheromone learning.
+
+\section*{Validation}
+
+The internal optimization measure is fitness, but fitness alone is not enough because it is directly optimized by the algorithm. The work therefore introduces an external ecological validation metric based on CORINE Land Cover 2018. The motivation follows the original purpose of Köppen classification: climate regions should have some relationship with vegetation and land cover.
+
+Land cover is separated into agricultural, natural, artificial, and excluded categories. Agricultural and natural areas are evaluated separately because agriculture is influenced by both climate and human management, while natural vegetation is more directly climate-related. Artificial areas are excluded from the final ecological consistency score but reported separately.
+
+For each climate region, Shannon entropy is used to measure land-cover diversity. Lower normalized entropy means higher homogeneity. Agricultural consistency and natural consistency are computed separately, then combined according to the proportions of agricultural and natural pixels in each cluster. The final ecological consistency score is an area-weighted average over clusters. Higher values indicate that climate regions correspond better to coherent land-cover patterns.
+
+The study also reports Adjusted Rand Index (ARI) against KMeans. ARI is not treated as a quality metric. It is used only to describe how similar an ACO solution is to the KMeans baseline.
+
+\section*{Experimental Setup and Results}
+
+The systematic sweep evaluates 252 seed-averaged configurations, based on 504 individual runs with two random seeds. The experiments use five clusters, 15 ants, 20 iterations, superpixel mode, Köppen-inspired features, target superpixel size 150, and 16 neighbors. The tested values are $\alpha \in \{0.75, 1.0, 2.0\}$, $\beta \in \{1.0, 3.0\}$, evaporation rates 0.02 and 0.10, and $q=0.05$.
+
+Two reference regionalizations are evaluated. KMeans achieves fitness 0.2376 and weighted ecological consistency 0.4744. Köppen-Geiger achieves fitness 0.3679 and weighted ecological consistency 0.4426. KMeans has lower fitness because it directly clusters the climate feature space, while Köppen-Geiger follows predefined classification rules.
+
+Across all ACO configurations, fitness varies much more strongly than ecological consistency. The best seed-averaged fitness is 0.2325, the mean fitness is 0.4613, and the maximum is 0.9307. Weighted ecological consistency ranges from 0.3946 to 0.4846, with a mean of 0.4448. This shows that algorithm choice has a strong effect on the optimized objective, while ecological differences are smaller but still meaningful.
+
+The centroid-based variants perform best. ACO Centroid has average fitness 0.2701 and ecological consistency 0.4700. ACO Centroid + Refinement has average fitness 0.3141 and ecological consistency 0.4683. The multi-colony centroid-graph-spatial variant ranks third, while graph-local and cohesion-based methods perform worse on average.
+
+Among pheromone update strategies, all-ants gives the best average results, with fitness 0.4424 and ecological consistency 0.4470. Best-ant and quality-weighted updates are similar but slightly weaker on average. Among parameters, $\beta$ has the strongest effect: $\beta=3$ gives much better average fitness and ecological consistency than $\beta=1$. The influence of $\alpha$ and evaporation is smaller.
+
+The top configurations confirm the same conclusion. The top 25 configurations by ecological consistency all belong to ACO Centroid or ACO Centroid + Refinement. The top 25 configurations by fitness are also dominated by these two variants, with only one cohesion-refinement configuration appearing.
+
+\section*{Conclusion}
+
+The results show that ACO is a viable framework for climate regionalization of Serbia. The best ACO solutions achieve competitive fitness relative to KMeans and better fitness than Köppen-Geiger. The best ecological ACO solution also slightly improves on the KMeans baseline in weighted ecological consistency.
+
+The strongest conclusion is that construction strategy matters more than fine parameter tuning. Centroid-based construction is most effective in the current framework, while graph and cohesion alternatives perform worse. This may partly reflect the centroid-based compactness term in the fitness function, so future work should investigate alternative objectives and pheromone representations that are less tied to explicit cluster labels.
+
+\end{document}

@@ -1,0 +1,991 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{tikz-cd}
+\usepackage{multicol}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1\baselineskip}
+
+\title{Climate regionalization of Serbia using Ant Colony Optimization}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Research motivation and objectives}
+\label{sec:motivation}
+
+\subsection{Motivation}
+
+Climate regionalization is the process of dividing a geographical area into regions with similar climatic characteristics. Such regions are useful in many scientific and practical applications, including agriculture, forestry, ecology, hydrology, biodiversity conservation and spatial planning. 
+
+The most widely used climate regionalization is the Köppen-Geiger climate classification. It classifies climate using long-term temperature and precipitation statistics. It has been the standard climate classification system for more than one hundred years. Because of its simplicity and global applicability, it is still commonly used in climatology, ecology and many other environmental sciences.
+
+Although the Köppen-Geiger classification is extremely successful as a global climate classification system, it was not designed to optimize regionalization for a particular country or application. The classification is based on predefined climatic thresholds that are applied worldwide. Consequently, it cannot adapt to local climatic characteristics or optimize the resulting regions according to a desired objective.
+
+Recent advances in optimization algorithms and machine learning make it possible to approach climate regionalization from a different perspective. Climate regions can be obtained by solving an optimization problem. Such an approach allows different optimization objectives.
+
+The goal of this work is not to replace the Köppen-Geiger classification as a universal climate classification system. Instead, the objective is to investigate whether a data-driven optimization approach can produce a regionalization that is better suited for Serbia while using comparable climatic information.
+
+In the proposed approach, each ant constructs one candidate climate regionalization. One ant assigns every spatial unit to one of a predefined number of climate regions. A complete ant solution is therefore a vector of cluster labels, with one label assigned to each spatial unit. The quality of each candidate regionalization is evaluated using an objective function that combines climatic compactness and spatial coherence. Climatic compactness measures whether locations assigned to the same region have similar temperature and precipitation characteristics. Spatial coherence encourages spatial units to take the same regional label as their neighbours which stops extremely fragmented regions. Ant Colony Optimization searches for the assignment that minimizes the weighted combination of these two criteria.
+
+
+\subsection{Research objectives}
+The main objective of this research is to develop an optimization framework for climate regionalization based on Ant Colony Optimization (ACO).
+The current result is not a single optimized climate map, but an optimization framework that allows comparing different strategies. At this point, this work includes:
+
+\begin{itemize}
+    \item preprocessing pipeline for transforming climatic raster data into a format suitable for optimization
+    \item a couple of ACO construction strategies and heuristic functions
+    \item investigation of different pheromone update strategies and algorithm parameters
+    \item comparison of the proposed approaches with the KMeans as a baseline
+    \item comparison of the new classification with the Köppen-Geiger regionalization
+    \item external validation measures based on independent land cover information, inspired by the original purpose of Koppen regionalization
+\end{itemize}
+
+
+\section{Köppen-Geiger climate classification}
+\label{sec:koppen}
+
+\subsection{Historical background}
+
+The Köppen-Geiger climate classification is one of the oldest and most widely used climate classification systems. It was originally developed by the German climatologist Wladimir Köppen at the end of the nineteenth century and was later refined together with Rudolf Geiger. During the following decades the classification became the standard reference for describing climate regions throughout the world.
+
+The original motivation behind the Köppen classification was to describe the relationship between climate and natural vegetation. Köppen observed that regions with similar temperature and precipitation conditions often support similar types of vegetation. He therefore designed the classification so that climate zones would approximately correspond to the major vegetation regions of the world.
+
+Unlike many regional climate classifications developed for specific countries, the Köppen-Geiger system was designed as a global classification. The same classification rules are applied to every location regardless of continent or geographical characteristics. Because of its simplicity, reproducibility and long history of use, the Köppen-Geiger classification is still widely used in climatology, ecology, agriculture, forestry and many other environmental sciences.
+
+The classification has also been updated several times using newer climatic observations while preserving the original classification principles. This has allowed the system to remain relevant despite changes in the global climate.
+
+\subsection{Climate classes}
+
+The classification is hierarchical. The classes labels consist of three letters. The first level of the Köppen-Geiger classification divides the world's climates into five major climate groups.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\hline
+Group & Description \\
+\hline
+A & Tropical climates \\
+B & Arid climates \\
+C & Temperate climates \\
+D & Continental climates \\
+E & Polar climates \\
+\hline
+\end{tabular}
+\caption{Main Köppen-Geiger climate groups.}
+\end{table}
+
+Additional letters provide more detailed information about the climatic conditions. The second letter usually describes the precipitation regime, for example whether precipitation is evenly distributed throughout the year or concentrated in particular seasons. The third letter describes the thermal characteristics of the climate, such as summer temperature or winter severity. Combining these letters produces climate classes such as Cfa, Cfb, Dfb, etc.
+
+Although the complete Köppen-Geiger system contains many different climate classes, only a small subset is present within Serbia. These classes will be introduced together with the Köppen reference dataset used later in this work.
+
+\subsection{Advantages}
+
+The Köppen-Geiger classification has remained the most widely used climate classification system for more than one hundred years for several reasons.
+
+\begin{itemize}
+    \item It is simple and easy to interpret.
+    \item It is based on physically meaningful climatic variables.
+    \item The same methodology can be applied worldwide.
+    \item The resulting climate classes are reproducible.
+    \item The classes have a strong relationship with natural vegetation.
+    \item It provides a common reference used across many scientific disciplines.
+\end{itemize}
+
+These characteristics make the Köppen-Geiger classification an appropriate reference when evaluating alternative climate regionalization methods.
+
+\subsection{Limitations}
+
+Despite its widespread use, the Köppen-Geiger classification also has several limitations when used for regional climate regionalization.
+\begin{itemize}
+  \item The classification is entirely rule-based. Every location is assigned to a climate class using predefined thresholds instead of optimizing the resulting regions according to a specific objective.
+  \item The boundaries between climate classes are determined by fixed threshold values. Small differences in temperature or precipitation around these thresholds may result in different climate classes even though the climatic conditions are very similar.
+  \item Depending on the granularity of the map, rule-based classification might result in inconvinient small clusters, which can make the regionalization look fragmented and incoherent
+\end{itemize}
+
+The objective of this research is therefore not to replace the Köppen-Geiger classification as a universal climate classification system. Instead, it is used as a well-established reference against which the proposed optimization-based regionalization can be compared.
+
+
+
+\section{Data preparation: climate raster files and final dataframe}
+\label{sec:data-prep}
+
+\subsection{Short summary}
+The first step was to prepare the climate data in a form that can be used for clustering. The input data consisted of several .tif raster files, where each file represents one climate variable over Serbia. Since the rasters had to be used together, they were first put onto the same spatial grid. After that, the value from every raster was extracted for every grid cell and stored in one table. Rows with missing values were removed, so the final dataframe contains only locations where all climate variables are available. This final table is saved as df\_valid.csv and is used as the input for the later preprocessing and clustering pipeline.
+
+Key input \& outputs:
+\begin{verbatim}
+  Inputs:
+  - Climate raster layers (.tif)
+
+  Outputs:
+  - master_df.csv
+  - df_valid.csv
+
+  Used later by:
+  - preprocessing.py
+\end{verbatim}
+
+\subsection{Detailed explanation}
+The climate data used in this work were obtained from the Serbian Academy of Science and Art (SANU). The dataset consists of raster maps representing long-term climatic averages over the territory of Serbia. The rasters contain monthly, seasonal and annual summaries of temperature and precipitation. 
+The climate dataset consists of 31 raster layers. The layers include monthly, seasonal and annual averages of air temperature (1961–2010) and monthly, seasonal and annual precipitation totals. These layers are continuous raster variables, such as temperature or precipitation values for different seasons or annual summaries.
+
+\begin{table}[ht]
+  \centering
+  \label{tab:climate_layers}
+  \begin{tabular}{lr}
+    \textbf{Variable type} & \textbf{Number of layers} \\
+      Monthly temperature      & 12 \\
+      Seasonal temperature     & 4  \\
+      Annual temperature       & 1  \\
+      Monthly precipitation    & 9  \\
+      Seasonal precipitation   & 4  \\
+      Annual precipitation     & 1  \\
+    \textbf{Total}           & \textbf{31} \\
+  \end{tabular}
+  \caption{Climate raster layers used to construct the final dataset.}
+\end{table}
+
+
+Monthly precipitation rasters were available for only nine months. The initial data are stored as multiple GeoTIFF files in the folder Karte. Each .tif file contains one climate-related layer. Because the goal is to compare all climate variables at the same spatial locations, all rasters first need to have the same grid. This means they need to have the same:
+
+\begin{itemize}
+  \item coordinate reference system
+  \item spatial resolution
+  \item raster width and height
+\end{itemize}
+
+In this stage, one raster is used as the reference raster. All other rasters are then resampled and reprojected so that they match this reference grid. The aligned rasters are saved into a new folder called Karte\_jedna\_mreza. After this step, all climate layers have the same shape and can be safely combined cell by cell.
+
+The next step is to create one table from the aligned rasters. For each raster cell, the notebook records:
+
+\begin{itemize}
+  \item row
+  \item col
+  \item easting
+  \item northing
+\end{itemize}
+
+The row and col columns identify the position of the pixel within the raster grid. They are later used to reconstruct raster maps from the dataframe and to merge the climate data with external datasets such as vegetation and the Köppen-Geiger classification.The easting and northing values describe the real projected UTM coordinates of each raster cell.
+
+Then, for every climate raster, a new column is added to the dataframe. Each row therefore represents one spatial cell/pixel, and each climate column gives the value of one climate variable at that location.
+
+At the end, rows with missing values are removed. This is important because some raster cells may fall outside the valid area (Serbia), or some variables may not have values at all locations. The final dataframe keeps only rows where all climate variables are available.
+
+The notebook reports:
+\begin{verbatim}
+  Total cells: 553 539
+  Valid cells after removing missing values: 301 394
+  Number of climate columns: 31
+\end{verbatim}
+
+The final output is saved as: \texttt{df\_valid.csv}. This file is the main input for the next stages of the project. It contains the spatial coordinates and all climate variables for the valid grid cells.
+
+
+\section{Preprocessing}
+\label{sec:preprocessing}
+
+\subsection{Short summary} 
+The purpose of the preprocessing module is to transform the climate dataframe into a representation that can be directly used by the clustering algorithms. Besides selecting the input features, the module also creates the spatial neighborhood graph, optionally groups pixels into superpixels, standardizes the feature values and returns all information required by the optimization algorithms. The output of this module is the common input format used by all clustering methods.
+
+\subsection{Detailed explanation}
+\subsubsection{Common preprocessing pipeline}
+
+All clustering algorithms use the same preprocessing pipeline. This ensures that differences in the final results come from the optimization algorithm itself rather than from differences in the input data.
+
+The preprocessing module receives the dataframe created in the previous step (df\_valid.csv) and produces a standardized representation consisting of:
+\begin{itemize}
+  \item feature matrix (X\_model)
+  \item spatial coordinates of every node
+  \item node weights
+  \item neighborhood graph
+  \item mapping between original pixels and optimization nodes
+\end{itemize}
+
+Depending on the selected mode, one optimization node may represent either a single pixel or an aggregated superpixel
+
+\subsubsection{Feature construction}
+One of the goals of the project is to investigate how different feature representations affect the quality of climate regionalization. For this reason the preprocessing module supports three different feature sets.
+
+\textbf{Raw climate variables} \\
+The simplest representation uses all climate variables directly. Every raster layer becomes one feature, resulting in a feature vector containing all available temperature and precipitation variables. This representation preserves all available information but also contains a large number of correlated variables. This hasn't been tested thouroghly.
+
+\textbf{Köppen-inspired features} \\
+Instead of using all climate variables directly, the second option constructs a smaller set of summary statistics inspired by the Köppen climate classification. The following quantities are computed separately for every spatial location:
+
+\begin{itemize}
+  \item mean temperature
+  \item minimum temperature
+  \item maximum temperature
+  \item temperature range
+  \item mean precipitation
+  \item minimum precipitation
+  \item maximum precipitation
+  \item total precipitation
+  \item precipitation range
+\end{itemize}
+
+Additional optional variables such as temperature standard deviation, precipitation standard deviation and a simple dryness index are also implemented, although they were not used in the current experiments. This mode was used in all of the test runs shown in this report.
+
+\textbf{PCA features} \\
+The third option applies Principal Component Analysis separately to temperature and precipitation variables. Instead of combining all variables into a single PCA model, the two groups are transformed independently, producing separate principal components for temperature and precipitation. This preserves the distinction between the two climate components while still reducing dimensionality. Although this functionality is implemented, it has not yet been fully evaluated and will be investigated in future experiments.
+
+\subsubsection{Superpixel generation}
+The preprocessing module supports two optimization modes. In pixel mode, every original raster cell becomes one optimization node. In superpixel mode, neighboring pixels are first grouped into larger spatial units using MiniBatch K-Means applied only to spatial coordinates. The average climate values of all pixels belonging to one superpixel become the feature vector of the new optimization node. Since every graph node represents a different number of original raster cells, the size of each superpixel is stored as a node weight, allowing larger regions to contribute proportionally during optimization, when cluster centroids and fitness values are calculated. 
+
+\subsubsection{Feature scaling}
+Because climate variables have different numerical ranges, the feature values are standardized before clustering. The module uses standardization after the final feature representation has been constructed. This prevents variables with larger numerical ranges from dominating the distance calculations used by the optimization algorithms.
+
+\subsubsection{Neighborhood graph}
+After the optimization nodes have been created, a spatial neighborhood graph is constructed using the k-nearest-neighbor algorithm on the row and column features. This graph is later used by several heuristic functions and by the spatial component of the objective function. The number of neighbors is configurable, allowing experiments with different neighborhood sizes.
+
+\subsubsection{Final model representation}
+The last function of the module combines all preprocessing steps into a single pipeline. Depending on the selected configuration, it:
+\begin{itemize}
+  \item builds the chosen feature representation
+  \item optionally creates superpixels
+  \item standardizes the feature values
+  \item constructs the neighborhood graph
+  \item returns all information required by the clustering algorithms
+\end{itemize}
+The resulting structure is then passed unchanged to all optimization algorithms implemented later in the project.
+
+
+\section{Ant clustering engine, fitness functions and pheromone updates}
+\label{sec:frameworsk}
+
+\subsection{Short summary}
+This part of the code defines the main optimization framework. The goal was to make one common engine that can run different ant-based clustering strategies under the same conditions. The engine does not decide how one ant builds a clustering solution. Instead, that part is passed in as a separate construction function. After each ant builds a solution, the solution is evaluated using the same fitness function and pheromone values are updated.
+
+The current fitness combines two terms: feature compactness and spatial disagreement. Compactness measures how close points are to their assigned cluster centroids, while spatial disagreement measures how often neighboring nodes belong to different clusters. Lower fitness is better. The pheromone matrix stores a learned preference for assigning each node to each cluster.
+
+
+\subsection{Detailed explanation}
+
+\subsubsection{Main optimization engine}
+The main optimizer is implemented in AntClusteringOptimizer. Its role is to control the general ant-colony optimization loop.
+
+The optimizer is intentionally generic. It does not contain the actual solution construction logic. Instead, it receives several functions as input:
+\begin{itemize}
+  \item construct\_solution\_fn
+  \item fitness\_fn
+  \item pheromone\_update\_fn
+  \item pheromone\_init\_fn
+\end{itemize}
+This means that different clustering strategies can be compared fairly. The outer optimization loop stays the same, while only the construction strategy changes.
+
+In each iteration, the optimizer runs several ants. Each ant constructs one complete clustering solution. A solution consists of:
+\begin{itemize}
+  \item labels
+  \item centroids
+\end{itemize}
+The labels array contains the assigned cluster for every node. The centroids array contains the cluster centers computed from that assignment.
+
+After a solution is constructed, it is evaluated by the fitness function. For every ant, the optimizer stores:
+\begin{itemize}
+  \item fitness
+  \item labels
+  \item centroids
+  \item fitness terms
+\end{itemize}
+
+The best solution found so far is kept during the full optimization process. At the end, the optimizer stores the final best result in:
+\begin{itemize}
+  \item labels\_
+  \item centroids\_
+  \item best\_fitness\_
+  \item history\_
+  \item term\_history\_
+  \item pheromone\_
+\end{itemize}
+
+The history\_ list stores the global best fitness after every iteration. The term\_history\_ list stores more detailed information, including iteration-best fitness, mean fitness, standard deviation, compactness, spatial disagreement and pheromone minimum/maximum values.
+
+\subsubsection{Pheromone matrix}
+The pheromone matrix has shape:
+\texttt{number of nodes × number of clusters}.
+Each value means:
+\texttt{pheromone[i, k] = learned preference for assigning node i to cluster k}. 
+At the beginning, all node-cluster assignments have equal pheromone values. If row normalization is used, each row sums to 1. This representation is appropriate for clustering because the final decision for every node is exactly the choice of one cluster label. \texttt{number of clusters} is 5 based on the number of major Köppen classes present in Serbia.
+
+\subsubsection{General optimization loop}
+The optimization process can be summarized as:
+\begin{verbatim}
+initialize pheromone
+for each iteration:
+    for each ant:
+        construct a clustering solution
+        evaluate the solution
+        store the solution
+    update pheromone
+    update global best solution
+    save iteration statistics
+\end{verbatim}
+
+The implementation also allows pheromone updates after smaller batches of ants. If no batch size is given, pheromone is updated once after all ants in the iteration. If a batch size is given, pheromone is updated several times inside the same iteration. This was useful during experimentation because it made it possible to compare iteration-level, colony-level, batch-level, and ant-level learning behavior.
+
+\subsubsection{Fitness function}
+The current fitness function is a weighted sum of two terms:
+\texttt{fitness = w\_compactness · compactness + w\_spatial · spatial\_disagreement}
+
+The first term is feature compactness. It measures how close nodes are to the centroid of their assigned cluster. This is normalized by the total variance of the data, so the value is easier to compare across different feature representations. All centroid and variance calculations are weighted using the superpixel node weights described in the preprocessing stage. This ensures that the optimization approximates the result that would be obtained if the algorithm operated directly on the original raster cells.
+
+The second term is spatial disagreement. It measures the fraction of neighboring node pairs that have different cluster labels. If many neighboring nodes belong to different clusters, the map is fragmented and spatial disagreement is high. If neighboring nodes often belong to the same cluster, spatial disagreement is low.
+
+The default weights used in the experiments were:
+\begin{verbatim}
+  w_compactness = 0.7
+  w_spatial = 0.3
+\end{verbatim}
+
+This means that the objective gives more importance to feature compactness, while still encouraging spatially smoother clusters. 
+
+
+\subsubsection{Compactness}
+Compactness is computed as:
+\texttt{within-cluster variance / total variance}. The numerator measures how far each node is from the centroid of its assigned cluster. The denominator measures the total variance of the full dataset around the global centroid. This normalization makes the compactness term dimensionless. That is useful because experiments may use different feature sets, such as raw climate variables, PCA features, or Köppen-inspired features.
+
+One important note is that this compactness term is centroid-based. Therefore, even if a construction strategy uses a non-centroid heuristic, the final fitness still partly rewards centroid-like cluster structure. This is not an implementation error, but it is important for interpreting the results.
+
+\subsubsection{Spatial disagreement}
+Spatial disagreement uses the neighborhood graph created during preprocessing. For each node, the function checks its neighbors. If a neighbor has a different label, this counts as a disagreement. The final score is:
+\texttt{number of disagreeing neighbor links / total number of neighbor links}. The value is between 0 and 1. A value close to 0 means neighboring nodes usually belong to the same cluster. A larger value means the clustering is more fragmented.
+
+The function supports two modes:
+\begin{enumerate}
+  \item directed neighbor counting;
+  \item symmetric neighbor counting.
+\end{enumerate}
+
+In the current experiments, the directed version was used because it directly matches the k-nearest-neighbor graph produced by preprocessing.
+
+
+\subsubsection{Pheromone update strategies}
+Three pheromone update strategies were implemented.
+
+\textbf{All-ants update} \\
+This strategy uses information from the whole ant population, not only the best solution. In this strategy, every ant deposits pheromone after evaporation. Since lower fitness is better, lower fitness produces a larger deposit. Better solutions deposit more pheromone because the deposit is computed as:
+\texttt{q / fitness}
+
+\textbf{Best-ant update} \\
+In this strategy, only the best ant from the current batch deposits pheromone. This is more exploitative than the all-ants update. It pushes the search more strongly toward the best solution found in the current batch, but it can also reduce diversity more quickly.
+
+\textbf{Quality-weighted update} \\
+In this strategy, deposit is based on how much better each solution is than the average solution in the current batch. Solutions worse than or close to the average receive little or no pheromone. The best solution receives the strongest reinforcement. This strategy was added to make pheromone deposition depend on relative solution quality, not only on absolute fitness.
+
+
+\subsubsection{Current implementation}
+This part of the implementation is relatively stable. The optimizer, fitness function, and pheromone update functions form the common experimental framework. They are not specific to one heuristic or one construction strategy.
+
+The main design choice that still affects interpretation is the fitness function. It currently uses centroid-based compactness. This is useful and easy to interpret, but it may favor KMeans-like solutions. Because of that, external validation metrics such as vegetation homogeneity are later used to check whether a solution is meaningful beyond centroid compactness.
+
+\section{Construction strategies and heuristics}
+\label{sec:strategies}
+
+\subsection{Short summary}
+This part of the code defines how a single ant builds one clustering solution. The optimizer described in the previous section controls the outer loop, but it does not decide how labels are assigned. That decision is handled by the construction strategies.
+
+Each construction strategy assigns every node to one of the available clusters. The assignment probability depends on two parts: the pheromone value learned from previous ants and a heuristic score computed from the current partial solution. Several heuristics were tested, including centroid similarity, graph-local similarity, cohesion similarity and spatial support.
+
+The purpose of this part of the project was to test different ways of constructing climate regions, especially alternatives that are less directly tied to KMeans-style centroid compactness.
+
+\subsection{Detailed explanation}
+
+\subsubsection{Role of construction strategies}
+A construction strategy defines how one ant creates a complete clustering solution. At the beginning of construction, all nodes are unassigned. The ant then visits nodes in random order. For each node, it computes a probability of assigning that node to each cluster. The node is then assigned by sampling from this probability distribution. After all nodes have been assigned, the centroids are recomputed and the complete solution is returned to the optimizer.
+
+In general, the probability depends on: \texttt{pheromone score × heuristic score}. The pheromone score comes from previous iterations and represents learned preference. The heuristic score is computed from the current partial solution and depends on the selected construction strategy.
+
+\paragraph{Initialization}
+
+Before solution construction begins, all spatial units are marked as unassigned by setting their cluster labels to $-1$. The initialization of cluster centroids depends on the selected construction strategy.
+
+For the centroid-based ACO and ACO Refinement strategies, all centroids are initially set to zero and are updated as nodes are assigned to clusters.
+
+Graph-based strategies require centroid estimates before enough neighboring nodes have been assigned. Therefore, the initial centroids are generated using the KMeans++ initialization procedure. 
+
+\subsubsection{Basic ACO construction}
+
+The basic ACO construction strategy builds one solution in a single pass. It visits all nodes once in random order and assigns each node to a cluster.
+
+The construction procedure is independent of the heuristic used. In the centroid-based variant, the heuristic score is computed from the distance between the current node and the temporary centroid of each cluster. In the cohesion-based variant, the heuristic is based on the similarity between the current node and the nodes that have already been assigned to each cluster. 
+
+
+\subsubsection{ACO with refinement}
+
+The refinement strategy extends the single-pass construction. After the initial solution has been constructed, cluster centroids are recomputed and the nodes are reassigned. This process is repeated several times, allowing the solution to improve after the initial construction pass.
+
+The refinement procedure consists of the following steps:
+
+\begin{enumerate}
+    \item assign cluster labels,
+    \item recompute cluster centroids,
+    \item reassign cluster labels,
+    \item recompute cluster centroids,
+    \item repeat for the specified number of refinement iterations.
+\end{enumerate}
+
+As with the basic ACO strategy, the refinement procedure can be combined with either the centroid-based or the cohesion-based heuristic. The refinement mechanism itself is independent of the heuristic used for node assignment.
+
+
+\subsubsection{Graph-local construction}
+The graph-local construction strategy uses the spatial neighborhood graph during assignment. For a node currently being assigned, the algorithm checks which of its neighboring nodes have already received labels. It then compares the node’s feature vector with the feature vectors of already assigned neighbors in each candidate cluster. If a node is similar to neighboring nodes that already belong to cluster k, then cluster k receives a higher heuristic score.
+
+However, this heuristic also contains a centroid fallback. When few neighboring nodes have already been assigned, the local graph evidence is weak. In that case, the heuristic partly relies on distance to initialized centroids.
+
+So this strategy is not purely graph-based. It is better described as: \texttt{local graph similarity with centroid fallback}.
+
+
+\subsubsection{Multi-colony construction}
+The multi-colony strategy was introduced to allow different types of ants to use different heuristics while sharing the same pheromone matrix. In this strategy, ants are divided into colonies. Each colony has its own heuristic function. For example, one colony may use a centroid heuristic, another may use a graph heuristic, and another may use a spatial heuristic. This was added to test whether combining several types of local decision rules could produce better clustering than relying on a single heuristic.
+
+The colony assignment is currently done sequentially by ant index. If there are three colonies and fifteen ants, the first group of ants belongs to the first colony, the second group to the second colony, and the last group to the third colony.
+
+All colonies still write to the same pheromone matrix. This means that different search behaviors can contribute to the same learned assignment preferences.
+
+
+
+\subsubsection{Heuristics}
+
+\textbf{Centroid heuristic} \\
+The centroid heuristic assigns higher probability to clusters whose current centroid is close to the node being assigned. This heuristic is closest to the logic of KMeans, although the assignment is still stochastic and influenced by pheromone.
+
+For each candidate cluster, the squared distance between the node and the centroid is computed. Smaller distance gives a larger score.
+
+
+\textbf{Graph-local heuristic} \\
+The graph-local heuristic uses already assigned spatial neighbors. For each candidate cluster, it checks whether any assigned neighbors already belong to that cluster. If they do, the feature distance between the current node and those neighbors is computed. Smaller average distance gives a larger score.
+
+Because early in the construction process many neighbors may still be unassigned, this heuristic blends the graph score with a centroid score. The more assigned neighbors are available, the more the graph score matters.
+
+
+\textbf{Spatial heuristic} \\
+The spatial heuristic uses only labels of already assigned neighbors. It does not use feature distances or centroids. If many assigned neighbors already belong to a certain cluster, that cluster receives a higher score.
+
+This heuristic was introduced to encourage spatially smoother and less fragmented cluster maps. It's never used on its own, just in multi-heuristic strategies.
+
+
+\textbf{Cohesion heuristic} \\
+The graph-cohesion heuristic was introduced as an alternative to centroid-based assignment. Instead of asking \texttt{Is this node close to the cluster centroid?} it asks: \texttt{Is this node similar to existing members of this cluster?}. This heuristic is useful because it reduces direct dependence on centroids and can represent cluster cohesion in a less KMeans-like way.
+
+For each candidate cluster, the heuristic samples already assigned members of that cluster and computes the average feature distance between them and the current node. Smaller average distance gives a higher score.
+
+To avoid unstable behavior when clusters are still too small, the heuristic only uses a cluster if it already has more than a minimum number of assigned members. In the current code, that threshold is 15 members and the maximum sample size is 40.
+
+
+\subsection{Current state of this part of the code}
+This module contains the most experimental part of the project. It includes several construction strategies and heuristics that were introduced while testing different ways to move beyond simple centroid-based clustering. 
+
+There are  two choices that are intentional and should be documented rather than treated as errors.
+\begin{enumerate}
+  \item The graph-local heuristic includes a centroid fallback. This was added because, early in construction, many spatial neighbors are still unassigned. In that situation, a purely graph-based score has little information. The centroid fallback gives the heuristic a weak feature-based signal until enough neighboring labels are available.
+  \item The multi-colony strategy includes a small mutation mechanism. The goal of this mutation is not to target one specific colony, but only to affect a small subset of ants. This keeps some exploration in the search process without randomizing all ants or all colonies. In the current implementation, the mutation parameters are hardcoded, but they could later be made configurable.
+\end{enumerate}
+
+Overall, the construction and heuristic module should be understood as the experimental part of the method. It contains the main alternatives that were tested: centroid-based construction, graph-local construction, cohesion-based construction, refinement, and multi-colony construction. The final experiments will determine which of these variants should remain in the final comparison.
+
+
+
+\section{Validation methodology}
+\label{sec:validation}
+
+\subsection{Internal optimization measure}
+The optimization process is guided by the fitness function defined in Section 3. The fitness value is reported for every experiment as the internal optimization measure. Since the fitness function is directly optimized by the algorithm, it is not sufficient as an independent evaluation criterion.
+
+
+\subsection{External ecological validation}
+\subsubsection{Motivation}
+Different climate conditions are associated with different types of land cover. Forests, shrublands, grasslands and other natural land cover types develop under different climatic conditions. Therefore, consistent land cover segregation within climate regions may indicate that the obtained regionalization captures at least part of the underlying climate variability. This section describes the proposed ecological consistency metric together with the dataset used for its calculation.
+
+
+\subsubsection{Land cover categorization by climate influence}
+Natural vegetation develops under long-term climatic conditions. Areas with similar climate are expected to have similar natural vegetation.
+
+Agricultural areas are different. Climate is still an important factor, but land management, farming practices and economic decisions also influence land cover. Because of this, agricultural areas should not be treated in the same way as natural vegetation.
+
+Artificial areas are even less suitable for climate validation. Urban development and infrastructure depend mainly on human decisions. They therefore provide little information about climate regionalization.
+
+For these reasons, the proposed validation method evaluates agricultural and natural areas separately. Artificial areas are excluded from the final score.
+
+This approach allows every climate region to be evaluated using the land cover types that are most informative for that part of the landscape.
+
+
+\subsubsection{CORINE Land Cover dataset}
+The external validation is based on the CORINE Land Cover (CLC) 2018 dataset produced by the Copernicus Land Monitoring Service.
+
+The raster version with a spatial resolution of 100 m was used in this work. Every raster cell belongs to one of the official CLC land cover classes. The dataset covers the entire territory of Serbia and was reprojected to match the coordinate reference system used by the climate dataset.
+
+The vegetation dataset is completely independent of the climate variables used during clustering. It is therefore suitable for evaluating whether the obtained climate regions correspond to meaningful environmental regions.
+
+The original CLC dataset contains many detailed land cover classes. For the purpose of validation, these classes were grouped into broader categories.
+
+The following natural categories were used:
+\begin{itemize}
+  \item Broadleaf forest
+  \item Coniferous forest
+  \item Mixed forest
+  \item Shrubland
+  \item Grassland and bare land
+  \item Wetlands
+  \item Water
+\end{itemize}
+
+Areas that had one of the agricultural classes were kept as a separate category. Unlike natural vegetation, agricultural land is strongly influenced by human management. However, different agricultural land cover classes still provide useful information about climate suitability.
+
+Artificial surfaces were also identified separately. These areas mainly represent cities, roads and other built-up infrastructure. Their spatial distribution is determined mostly by human activity rather than climate. Artificial areas are therefore excluded from the ecological consistency score. Their proportion is still reported as additional information.
+
+\subsubsection{Ecological consistency of agricultural areas}
+Shannon entropy was selected for measuring area consistency because it measures the diversity of land cover classes within a climate region. Lower entropy indicates that most pixels belong to a small number of land cover classes, while higher entropy indicates a more heterogeneous region.
+
+For every climate region, only pixels classified as agricultural land are selected. The relative proportion of every agricultural land cover class is calculated. Let $p_i$ represent the proportion of agricultural class $i$, where
+\[
+\sum_{i=1}^{m} p_i = 1.
+\]
+
+The Shannon entropy is
+\[
+H_A=-\sum_{i=1}^{m} p_i \log(p_i).
+\]
+Since different clusters may contain different numbers of agricultural classes, the entropy is normalized.
+\[
+H_A^{\mathrm{norm}}
+=
+\frac{H_A}{\log(m)}.
+\]
+The agricultural consistency is then defined as
+\[
+G_A
+=
+1-H_A^{\mathrm{norm}}.
+\]
+The value of $G_A$ is between 0 and 1. A value close to 1 indicates that most agricultural land belongs to only a few land cover classes. This means that the agricultural areas inside the climate region are relatively homogeneous. Lower values indicate a more diverse agricultural structure.
+
+\subsubsection{Ecological consistency of natural land}
+The same procedure is applied to natural land cover. Only the following groups are considered:
+\begin{itemize}
+  \item Broadleaf forest
+  \item Coniferous forest
+  \item Mixed forest
+  \item Shrubland
+  \item Grassland and bare land
+  \item Wetlands
+  \item Water
+\end{itemize}
+Let $q_i$ be the proportion of natural land cover class $i$. The Shannon entropy is
+\[
+H_N=-\sum_{i=1}^{n} q_i \log(q_i).
+\]
+The normalized entropy is
+\[
+H_N^{\mathrm{norm}}
+=
+\frac{H_N}{\log(n)}.
+\]
+The natural land consistency is
+\[
+G_N
+=
+1-H_N^{\mathrm{norm}}.
+\]
+Again, values closer to 1 indicate more homogeneous natural vegetation inside the climate region.
+
+\subsubsection{Combined ecological consistency}
+Every climate region contains different proportions of agricultural and natural land. Let $A_k$ be the number of agricultural pixels in cluster $k$ and $N_k$ the number of natural pixels. Artificial pixels are not included. The relative contribution of agriculture is
+\[
+w_A
+=
+\frac{A_k}{A_k+N_k}.
+\]
+The contribution of natural land is
+\[
+w_N
+=
+\frac{N_k}{A_k+N_k}.
+\]
+The ecological consistency of cluster $k$ is defined as
+\[
+E_k
+=
+w_A G_A
++
+w_N G_N.
+\]
+This score automatically adapts to the land cover composition of each climate region. As a result, the metric can be applied consistently to regions dominated by either agricultural or natural land cover without favoring one land type over the other. Clusters dominated by agriculture are evaluated mostly using agricultural consistency. Clusters dominated by natural vegetation are evaluated mostly using natural vegetation consistency.
+
+\subsubsection{Overall ecological consistency}
+The final score is calculated as an area-weighted average of all climate regions. Let $n_k=A_k+N_k$ be the number of evaluated pixels in cluster $k$. The cluster weight is 
+\[
+\omega_k
+=
+\frac{n_k}
+{\sum_{j=1}^{K} n_j}.
+\]
+The final ecological consistency score is
+\[
+E
+=
+\sum_{k=1}^{K}
+\omega_k E_k.
+\]
+Higher values indicate that the climate regions are more environmentally consistent.
+
+
+\subsection{Similarity analysis}
+The ecological consistency score evaluates how well the climate regions correspond to independent land cover information. A different question is whether the proposed clustering algorithms produce solutions that are similar to classical centroid-based clustering methods. If the obtained clustering is very similar to the KMeans solution, the additional complexity introduced by the ACO framework may not provide significant practical benefits. For this purpose, the Adjusted Rand Index (ARI) is used.
+
+The ARI compares two different partitions of the same dataset. In this work, one partition is produced by the proposed ant colony algorithm and the other is produced by the KMeans algorithm.
+
+Unlike the ecological consistency score, the ARI is not used as a quality measure. A higher ARI does not necessarily mean a better climate regionalization. Instead, it measures how similar the obtained clustering is to the KMeans solution.
+
+The ARI is defined as
+\[
+ARI=
+\frac{RI-E(RI)}
+{\max(RI)-E(RI)},
+\]
+where $RI$ is the Rand Index and $E(RI)$ is its expected value for two random clusterings.
+
+The ARI takes values between -1 and 1. An ARI value of 1 means that the two clusterings are identical. An ARI value close to 0 indicates that the agreement is similar to what would be expected by chance.Negative values indicate less agreement than expected by chance.
+
+In this work, the ARI is used only to describe how much the proposed algorithms differ from KMeans. This helps determine whether the additional heuristics produce genuinely different climate regions or simply reproduce the centroid-based solution.
+
+\subsubsection{Köppen-Geiger climate classification}
+
+The Köppen-Geiger climate classification serves as a reference climate regionalization against which the obtained solutions are compared.
+
+A high-resolution Köppen-Geiger raster for the 1991--2020 climatological normal period was downloaded from the Global Hydro-Environmental Observatory (GloH2O) project. The raster has a spatial resolution of approximately 1 km and contains one Köppen climate class for every raster cell.
+
+Since the clustering pipeline operates on the dataframe \texttt{df\_valid.csv}, the Köppen raster was sampled at every valid climate grid cell using its geographical coordinates. The resulting Köppen class was stored together with the spatial coordinates.
+
+Later in the project, these Köppen labels are aggregated to the optimization nodes using majority voting. This allows the Köppen regionalization to be evaluated using exactly the same quality measures as the clustering algorithms. The original raster contained six Köppen classes over Serbia. After aggregation to optimization nodes, five classes remained because one class never became the dominant class within any node. This is why the predefined number of clusters in these ACO implementations is 5.
+
+\section{Results and discussion}
+\label{sec:results}
+This chapter first compares the proposed methods with the reference regionalizations. It then analyzes the influence of different algorithm variants and parameter values. Finally, the best-performing solutions are compared visually.
+
+All tested algorithms contain stochastic components, including random node ordering and probabilistic node assignment. To reduce the influence of randomness, every parameter configuration was executed 2 times using different random seeds. The reported results are based on the mean values.
+
+
+\subsection{Reference regionalizations}
+Before analyzing the proposed algorithms, it is useful to look at two reference regionalizations. These will serve as baseline solutions throughout the rest of this chapter.
+
+The first reference is KMeans clustering. KMeans is probably the most common clustering algorithm and groups locations based only on the similarity of their climate variables. It does not use any spatial information or ecological information.
+
+The second reference is the Köppen-Geiger climate classification. Unlike KMeans, Köppen is not a clustering algorithm. It is a rule-based climate classification that assigns every location to a climate class using predefined temperature and precipitation thresholds. Since it is the most widely used climate classification in the world, it provides a natural reference for comparison.
+
+To compare all methods fairly, both KMeans and Köppen were evaluated using exactly the same metrics as the proposed algorithms. For Köppen, the original raster was first converted to the optimization nodes using majority voting. The resulting labels were then evaluated in the same way as every clustering solution. Table~\ref{tab:reference_results} shows the obtained results.
+
+\begin{table}[ht]
+\centering
+\caption{Reference regionalizations.}
+\label{tab:reference_results}
+\begin{tabular}{lcc}
+\hline
+\textbf{Method} & \textbf{Fitness} & \textbf{Weighted ecological consistency} \\
+\hline
+KMeans & 0.2376 & 0.4744 \\
+Köppen-Geiger & 0.3679 & 0.4426 \\
+\hline
+\end{tabular}
+\end{table}
+
+KMeans achieves a much lower fitness value than Köppen. This is expected because KMeans is directly optimizing the climate data, while Köppen follows a fixed set of rules that were not designed for this optimization objective.
+
+The ecological consistency values are closer. KMeans still performs better, but Köppen also achieves a reasonably good score. This is not surprising because the original goal of the Köppen classification was to create climate regions that roughly match the distribution of natural vegetation.
+
+These two methods will be used as reference points when analyzing the proposed ant colony optimization algorithms in the following sections.
+
+
+\subsection{Overall experimental results}
+A total of 252 parameter configurations were evaluated. The experiments included different construction strategies, heuristic functions, pheromone update methods and parameter values. Every configuration was evaluated several times and the average results were recorded. Each configuration was evaluated using two main measures:
+
+\begin{itemize}
+    \item fitness, which was used as the optimization objective;
+    \item weighted ecological consistency, which was used as an external validation measure.
+\end{itemize}
+
+Table~\ref{tab:overall_stats} summarizes the overall statistics for both measures. Figures~\ref{fig:fitness_hist} and~\ref{fig:eco_hist} show the distribution of the two evaluation measures over all tested configurations.
+
+\begin{table}[ht]
+\centering
+\caption{Overall statistics of the evaluated configurations.}
+\label{tab:overall_stats}
+\begin{tabular}{lcc}
+\hline
+\textbf{Statistic} & \textbf{Fitness} & \textbf{Weighted ecological consistency} \\
+\hline
+Minimum & 0.2325 & 0.3946 \\
+Mean & 0.4613 & 0.4448 \\
+Median & 0.3514 & 0.4527 \\
+Maximum & 0.9307 & 0.4846 \\
+Standard deviation & 0.2391 & 0.0264 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{fitness_hist.png}
+    \caption{Distribution of fitness values over all evaluated configurations.}
+    \label{fig:fitness_hist}
+
+    \centering
+    \includegraphics[width=0.8\textwidth]{eco_hist.png}
+    \caption{Distribution of weighted ecological consistency over all evaluated configurations.}
+    \label{fig:eco_hist}
+\end{figure}
+
+The fitness values cover a wide range, from 0.2325 to 0.9307. This shows that the choice of algorithm and parameter values has a large influence on the optimization result. The histogram is also bimodal. There are essentially two groups:
+\begin{itemize}
+  \item a good group (roughly 0.23–0.50),
+  \item a poor group (roughly 0.65–0.93).
+\end{itemize}
+
+That strongly suggests that some algorithm families consistently perform much worse than others.
+
+The ecological consistency values vary much less. Most configurations are concentrated between approximately 0.44 and 0.48, while only a small number of experiments produce noticeably lower values. This suggests that although optimization has a strong effect on the fitness value, differences in ecological consistency are generally smaller.
+
+\newpage
+\subsection{Comparison of algorithm variants}
+
+This section compares the different algorithm variants tested in this work. Each variant was evaluated using all parameter combinations.Average fitness and weighted ecological consistency were calculated. Table~\ref{tab:algorithm_comparison} summarizes the average results for every algorithm.
+
+\begin{table}[ht]
+\centering
+\caption{Average results for the tested algorithm variants.}
+\label{tab:algorithm_comparison}
+\begin{tabular}{lcc}
+\hline
+\textbf{Algorithm} & \textbf{Fitness} & \textbf{Weighted ecological consistency} \\
+\hline
+ACO Centroid & 0.2701 & 0.4700 \\
+ACO Centroid + Refinement & 0.3141 & 0.4683 \\
+Multi-colony Centroid Graph Spatial & 0.3577 & 0.4535 \\
+ACO Graph Local & 0.5201 & 0.4344 \\
+Multi-colony Cohesion Graph Spatial & 0.5643 & 0.4314 \\
+ACO Cohesion + Refinement & 0.5985 & 0.4294 \\
+ACO Cohesion & 0.6046 & 0.4265 \\
+\hline
+\end{tabular}
+\end{table}
+
+The centroid-based methods consistently achieve the best results. Adding the refinement step slightly increases the fitness value, but the ecological consistency remains very similar. The multi-colony centroid graph spatial algorithm ranks third. Although it performs worse than the two centroid-based methods, it still clearly outperforms all graph and cohesion based approaches.
+
+The graph and cohesion variants achieve considerably higher fitness values and lower ecological consistency. Among them, the two cohesion-based methods produce the weakest results.
+
+Overall, the results indicate that the centroid heuristic is much more suitable for this problem than the graph or cohesion heuristics. For the remaining analysis, the centroid-based algorithms therefore receive the most attention.
+
+The influence of the pheromone update strategy was also investigated. Three update methods were tested: updating all ants, updating only the best ant and quality-weighted updates. Table~\ref{tab:pheromone_comparison} summarizes the average results.
+
+\begin{table}[ht]
+\centering
+\caption{Average results for different pheromone update strategies.}
+\label{tab:pheromone_comparison}
+\begin{tabular}{lcc}
+\hline
+\textbf{Update strategy} & \textbf{Fitness} & \textbf{Weighted ecological consistency} \\
+\hline
+All ants & 0.4424 & 0.4470 \\
+Best ant & 0.4767 & 0.4434 \\
+Quality weighted & 0.4649 & 0.4439 \\
+\hline
+\end{tabular}
+\end{table}
+
+The differences between the pheromone update strategies are much smaller than the differences between the algorithm variants. Updating all ants gives the lowest average fitness and the highest ecological consistency. The best-ant and quality-weighted updates produce very similar results.
+
+
+\subsection{Influence of parameters}
+
+Influence of each parameter will be investigated over all configs. In addition to that, the 25 best solutions according to the weighted ecological consistency are analyzed. This helps identify which parameter values are most common among the strongest solutions. 
+
+Before looking at the individual parameters, one important observation can already be made. The construction strategy has the largest influence on the final result. All of the 25 best configurations belong to one of the two centroid-based algorithms. None of the graph or cohesion based methods appear in this group. This suggests that choosing the right construction strategy is more important than fine-tuning the parameter values. 
+
+Overall, the experiments show that the construction strategy has the largest influence on the final regionalization. Among the remaining parameters, $\beta$ has the strongest effect on both fitness and ecological consistency. The pheromone update strategy has a smaller influence, while $\alpha$ and the evaporation rate mainly affect the fine tuning of the algorithm rather than the overall solution quality.
+
+\begin{table}[ht]
+\centering
+\caption{Summary of parameter influence.}
+\label{tab:parameter_summary}
+\begin{tabular}{lll}
+\hline
+Parameter & Best choice & Influence \\
+\hline
+Construction strategy & Centroid-based & Very high \\
+$\beta$ & 3 & High \\
+Pheromone update & All ants & Moderate \\
+$\alpha$ & 1 & Low \\
+Evaporation rate & No clear preference & Very low \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Influence of $\alpha$}
+Table~\ref{tab:alpha_results} shows the average results for the tested values of $\alpha$. The best average fitness and ecological consistency are obtained for $\alpha=1$. The differences between the three tested values are relatively small, however, showing that the algorithm is not very sensitive to this parameter.
+
+The analysis of the 25 best solutions leads to the same conclusion. Although $\alpha=1$ appears most often, the other two values are also well represented. This suggests that several values of $\alpha$ can produce good regionalizations when combined with a suitable algorithm and parameter setting.
+
+\begin{table}[ht]
+\centering
+\caption{Influence of $\alpha$.}
+\label{tab:alpha_results}
+\begin{tabular}{cccc}
+\hline
+$\alpha$ & Mean fitness & Mean ecological consistency & Top 25 share \\
+\hline
+0.75 & 0.4854 & 0.4428 & 32\% \\
+1.00 & 0.4415 & 0.4467 & 40\% \\
+2.00 & 0.4571 & 0.4449 & 28\% \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Influence of $\beta$}
+The influence of $\beta$ is much stronger than the influence of $\alpha$. Table~\ref{tab:beta_results} shows that using $\beta=3$ leads to substantially lower fitness values and higher ecological consistency than using $\beta=1$.
+
+The same trend is not as visible in the best solutions. Among the 25 configurations with the highest ecological consistency, 13 use $\beta=3$ and 12 use $\beta=1$. Although both values can produce excellent results, the overall statistics indicate that giving more weight to the heuristic information generally leads to better regionalizations.
+
+\begin{table}[ht]
+\centering
+\caption{Influence of $\beta$.}
+\label{tab:beta_results}
+\begin{tabular}{cccc}
+\hline
+$\beta$ & Mean fitness & Mean ecological consistency & Top 25 share \\
+\hline
+1 & 0.6273 & 0.4301 & 48\% \\
+3 & 0.2954 & 0.4595 & 52\% \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\subsubsection{Influence of the evaporation rate}
+
+Two evaporation rates were tested: 0.02 and 0.10. Table~\ref{tab:evaporation_results} shows that both values produce almost identical average fitness and ecological consistency. The analysis of the best solutions supports the same conclusion. Both evaporation rates appear with similar frequency among the 25 best configurations. 
+
+\begin{table}[ht]
+\centering
+\caption{Influence of the evaporation rate.}
+\label{tab:evaporation_results}
+\begin{tabular}{cccc}
+\hline
+Evaporation & Mean fitness & Mean ecological consistency & Top 25 share \\
+\hline
+0.02 & 0.4638 & 0.4446 & 44\% \\
+0.10 & 0.4589 & 0.4450 & 56\% \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Comparison of the best-performing configurations}
+
+The 25 highest-ranked configurations according to fitness and the 25 highest-ranked configurations according to weighted ecological consistency were analyzed separately. Table~\ref{tab:top25_summary} summarizes the basic statistics of both groups. The difference between the two groups is relatively small, showing that both metrics identify high-quality solutions.
+
+\begin{table}[ht]
+\centering
+\caption{Comparison of the best-performing configurations.}
+\label{tab:top25_summary}
+\begin{tabular}{lccc}
+\hline
+\textbf{Subset} & \textbf{Mean fitness} & \textbf{Mean ecological consistency} & \textbf{Mean ARI} \\
+\hline
+Top 25 by ecology & 0.2578 & 0.4775 & 0.6591 \\
+Top 25 by fitness & 0.2390 & 0.4709 & 0.6258 \\
+Overlap & 0.2404 & 0.4771 & 0.6887 \\
+\hline
+\end{tabular}
+\end{table}
+
+The overlap between the two groups contains only seven configurations. However, the composition of the two groups is also very similar. As shown in Table~\ref{tab:algorithm_top25}, almost all selected configurations belong to the two centroid-based algorithms. The only exception is one ACO Cohesion + Refinement configuration, which appears among the best solutions according to fitness.
+
+\begin{table}[ht]
+\centering
+\caption{Algorithm composition of the best-performing configurations.}
+\label{tab:algorithm_top25}
+\begin{tabular}{lcc}
+\hline
+\textbf{Algorithm} & \textbf{Top 25 by fitness} & \textbf{Top 25 by ecology} \\
+\hline
+ACO Centroid & 14 & 12 \\
+ACO Centroid + Refinement & 10 & 13 \\
+ACO Cohesion + Refinement & 1 & 0 \\
+\hline
+\end{tabular}
+\end{table}
+
+These results confirm the conclusions from the previous sections. The centroid-based construction strategy consistently produces the strongest solutions, regardless of the evaluation metric. 
+
+
+\subsection{Visual comparison of regionalizations}
+
+The previous sections compared the proposed methods using numerical evaluation measures. Figure~\ref{fig:regionalization_comparison} shows the map of the obtained climate regions for the two reference regionalizations and the two best ACO solutions. Table~\ref{tab:regionalization_summary} summarizes the corresponding evaluation measures.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{regionalization_comparison.png}
+    \caption{Comparison of the best configuration according to fitness, the best configuration according to weighted ecological consistency, KMeans clustering and Köppen-Geiger classification.}
+    \label{fig:regionalization_comparison}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\caption{Comparison of the selected regionalizations.}
+\label{tab:regionalization_summary}
+\begin{tabular}{lccc}
+\hline
+\textbf{Regionalization} & \textbf{Fitness} & \textbf{Weighted ecological consistency} & \textbf{ARI} \\
+\hline
+Köppen-Geiger & 0.3679 & 0.4426 & 0.3558 \\
+KMeans & 0.2376 & 0.4744 & 1.0000 \\
+Best fitness & 0.2325 & 0.4754 & 0.5431 \\
+Best ecological consistency & 0.2633 & 0.4848 & 0.6211 \\
+\hline
+\end{tabular}
+\end{table}
+
+Several observations can be made from Figure~\ref{fig:regionalization_comparison}. The Köppen-Geiger classification produces relatively large and continuous climate regions with simple boundaries. In contrast, KMeans creates more fragmented regions because it groups locations only according to the climate variables.
+
+The two ACO solutions show a different regionalization from both Köppen and KMeans. Large-scale climate regions are still recognizable, but many regional boundaries change. The best fitness and best ecological solutions are also visibly different from each other, even though both belong to the centroid-based family of algorithms.
+
+The numerical results agree with these observations. The best fitness configuration achieves the lowest fitness value of all compared regionalizations. The best ecological configuration achieves the highest ecological consistency, while maintaining a fitness value that is still close to the optimum. Both ACO solutions also achieve higher ecological consistency than the Köppen-Geiger classification, while the best ecological solution slightly improves upon the KMeans baseline.
+
+Overall, the visual comparison shows that the proposed optimization framework produces climate regionalizations that differ from both reference methods while maintaining competitive values for the optimization objective and ecological consistency.
+
+\section{Future work}
+\label{sec:future}
+
+This project currently provides a framework for climate regionalization using Ant Colony Optimization. Several directions for future work could follow.
+
+The first direction is to investigate different representations of the climate data. In this work, every location is described using 31 climate variables. Other feature representations, such as dimensionality reduction techniques, seasonal summaries or standardized climate variables, may produce different regionalizations and should be investigated.
+
+Another important direction is the development of alternative fitness functions. The current fitness function is largely based on centroid compactness and spatial coherence. Since the centroid-based algorithms consistently achieved the best results, it would be interesting to investigate whether this conclusion still holds when using fitness functions based on different clustering principles.
+
+The ecological consistency measure developed in this work could also be incorporated directly into the optimization process. Instead of using it only for evaluation, future work could formulate climate regionalization as a multi-objective optimization problem that simultaneously optimizes both the fitness function and ecological consistency.
+
+Another possible improvement is the development of pheromone update mechanisms that are invariant to cluster label permutations. In the current implementation, pheromone is associated with explicit cluster labels. Future work could investigate representations that reinforce equivalent clusterings regardless of the numerical labels assigned to the clusters.
+
+Finally, the proposed validation methodology could be extended by including additional independent datasets. Besides vegetation, future studies could investigate the use of elevation, soil characteristics or other environmental variables that are influenced by climate. This would provide a more complete assessment of the obtained climate regionalizations.
+
+\section{Conclusions}
+
+This project investigated the use of Ant Colony Optimization (ACO) for climate regionalization of Serbia. The main goal was to develop a flexible optimization framework capable of producing alternative climate regionalizations and to evaluate them using any measure we choose.
+
+A complete processing pipeline was developed, starting from raw climate raster layers and ending with the final climate regionalizations. The pipeline includes data preparation, graph construction, multiple ACO construction strategies, different pheromone update mechanisms and a validation framework based on land cover consistency. The modular implementation also allows new algorithms, heuristics and evaluation methods to be incorporated with relatively small modifications.
+
+Several ACO variants were compared during the experimental evaluation. The results showed that the choice of construction strategy has the largest influence on the final solution. Centroid-based algorithms consistently achieved the best results, while graph and cohesion based approaches produced lower optimization quality and ecological consistency. Among the tested parameters, the heuristic weight ($\beta$) had the strongest influence, whereas the evaporation rate had only a small effect on the final regionalizations.
+
+An important contribution of this work is the proposed ecological consistency metric based on the CORINE Land Cover dataset. Unlike the optimization objective, which measures compactness and spatial properties of the obtained clusters, the ecological consistency score evaluates how well the climate regions correspond to an independent environmental dataset. The experiments showed that these two measures do not always identify the same best solutions. This demonstrates that external validation provides useful additional information when selecting the final climate regionalization.
+
+The obtained regionalizations were also compared with the traditional Köppen-Geiger classification and the KMeans clustering algorithm. The proposed ACO framework produced solutions with better optimization quality than Köppen while also achieving higher ecological consistency. The best ecological ACO solution also slightly improved the ecological consistency of the KMeans baseline, demonstrating that the proposed optimization framework is capable of producing competitive climate regionalizations.
+
+Overall, the results show that Ant Colony Optimization is a suitable approach for climate regionalization. Although the centroid-based strategies proved to be the most effective within the tested framework, the developed methodology provides a flexible foundation for investigating alternative optimization objectives, construction strategies and validation methods in future research.
+
+
+\end{document}

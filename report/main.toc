@@ -1,0 +1,66 @@
+\contentsline {section}{\numberline {1}Research motivation and objectives}{5}{}%
+\contentsline {subsection}{\numberline {1.1}Motivation}{5}{}%
+\contentsline {subsection}{\numberline {1.2}Research objectives}{5}{}%
+\contentsline {section}{\numberline {2}Köppen-Geiger climate classification}{6}{}%
+\contentsline {subsection}{\numberline {2.1}Historical background}{6}{}%
+\contentsline {subsection}{\numberline {2.2}Climate classes}{6}{}%
+\contentsline {subsection}{\numberline {2.3}Advantages}{7}{}%
+\contentsline {subsection}{\numberline {2.4}Limitations}{7}{}%
+\contentsline {section}{\numberline {3}Data preparation: climate raster files and final dataframe}{8}{}%
+\contentsline {subsection}{\numberline {3.1}Short summary}{8}{}%
+\contentsline {subsection}{\numberline {3.2}Detailed explanation}{8}{}%
+\contentsline {section}{\numberline {4}Preprocessing}{10}{}%
+\contentsline {subsection}{\numberline {4.1}Short summary}{10}{}%
+\contentsline {subsection}{\numberline {4.2}Detailed explanation}{10}{}%
+\contentsline {subsubsection}{\numberline {4.2.1}Common preprocessing pipeline}{10}{}%
+\contentsline {subsubsection}{\numberline {4.2.2}Feature construction}{11}{}%
+\contentsline {subsubsection}{\numberline {4.2.3}Superpixel generation}{12}{}%
+\contentsline {subsubsection}{\numberline {4.2.4}Feature scaling}{12}{}%
+\contentsline {subsubsection}{\numberline {4.2.5}Neighborhood graph}{12}{}%
+\contentsline {subsubsection}{\numberline {4.2.6}Final model representation}{12}{}%
+\contentsline {section}{\numberline {5}Ant clustering engine, fitness functions and pheromone updates}{13}{}%
+\contentsline {subsection}{\numberline {5.1}Short summary}{13}{}%
+\contentsline {subsection}{\numberline {5.2}Detailed explanation}{13}{}%
+\contentsline {subsubsection}{\numberline {5.2.1}Main optimization engine}{13}{}%
+\contentsline {subsubsection}{\numberline {5.2.2}Pheromone matrix}{15}{}%
+\contentsline {subsubsection}{\numberline {5.2.3}General optimization loop}{15}{}%
+\contentsline {subsubsection}{\numberline {5.2.4}Fitness function}{15}{}%
+\contentsline {subsubsection}{\numberline {5.2.5}Compactness}{16}{}%
+\contentsline {subsubsection}{\numberline {5.2.6}Spatial disagreement}{16}{}%
+\contentsline {subsubsection}{\numberline {5.2.7}Pheromone update strategies}{17}{}%
+\contentsline {subsubsection}{\numberline {5.2.8}Current implementation}{17}{}%
+\contentsline {section}{\numberline {6}Construction strategies and heuristics}{17}{}%
+\contentsline {subsection}{\numberline {6.1}Short summary}{17}{}%
+\contentsline {subsection}{\numberline {6.2}Detailed explanation}{18}{}%
+\contentsline {subsubsection}{\numberline {6.2.1}Role of construction strategies}{18}{}%
+\contentsline {paragraph}{Initialization}{18}{}%
+\contentsline {subsubsection}{\numberline {6.2.2}Basic ACO construction}{18}{}%
+\contentsline {subsubsection}{\numberline {6.2.3}ACO with refinement}{19}{}%
+\contentsline {subsubsection}{\numberline {6.2.4}Graph-local construction}{19}{}%
+\contentsline {subsubsection}{\numberline {6.2.5}Multi-colony construction}{19}{}%
+\contentsline {subsubsection}{\numberline {6.2.6}Heuristics}{20}{}%
+\contentsline {subsection}{\numberline {6.3}Current state of this part of the code}{21}{}%
+\contentsline {section}{\numberline {7}Validation methodology}{21}{}%
+\contentsline {subsection}{\numberline {7.1}Internal optimization measure}{21}{}%
+\contentsline {subsection}{\numberline {7.2}External ecological validation}{22}{}%
+\contentsline {subsubsection}{\numberline {7.2.1}Motivation}{22}{}%
+\contentsline {subsubsection}{\numberline {7.2.2}Land cover categorization by climate influence}{22}{}%
+\contentsline {subsubsection}{\numberline {7.2.3}CORINE Land Cover dataset}{22}{}%
+\contentsline {subsubsection}{\numberline {7.2.4}Ecological consistency of agricultural areas}{23}{}%
+\contentsline {subsubsection}{\numberline {7.2.5}Ecological consistency of natural land}{24}{}%
+\contentsline {subsubsection}{\numberline {7.2.6}Combined ecological consistency}{24}{}%
+\contentsline {subsubsection}{\numberline {7.2.7}Overall ecological consistency}{25}{}%
+\contentsline {subsection}{\numberline {7.3}Similarity analysis}{25}{}%
+\contentsline {subsubsection}{\numberline {7.3.1}Köppen-Geiger climate classification}{26}{}%
+\contentsline {section}{\numberline {8}Results and discussion}{26}{}%
+\contentsline {subsection}{\numberline {8.1}Reference regionalizations}{27}{}%
+\contentsline {subsection}{\numberline {8.2}Overall experimental results}{27}{}%
+\contentsline {subsection}{\numberline {8.3}Comparison of algorithm variants}{30}{}%
+\contentsline {subsection}{\numberline {8.4}Influence of parameters}{31}{}%
+\contentsline {subsubsection}{\numberline {8.4.1}Influence of $\alpha $}{31}{}%
+\contentsline {subsubsection}{\numberline {8.4.2}Influence of $\beta $}{32}{}%
+\contentsline {subsubsection}{\numberline {8.4.3}Influence of the evaporation rate}{32}{}%
+\contentsline {subsection}{\numberline {8.5}Comparison of the best-performing configurations}{32}{}%
+\contentsline {subsection}{\numberline {8.6}Visual comparison of regionalizations}{33}{}%
+\contentsline {section}{\numberline {9}Future work}{34}{}%
+\contentsline {section}{\numberline {10}Conclusions}{35}{}%
