@@ -15,6 +15,7 @@ This script:
     6. writes:
         - results/stage2_validation_runs.csv
         - results/stage2_validation_summary.csv
+        - results/stage2_validation_stats.csv
 
 Run from project root:
 
@@ -32,7 +33,6 @@ Recommended first test:
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import sys
 import time
@@ -46,6 +46,7 @@ except Exception:
 import numpy as np
 import pandas as pd
 
+from scipy import stats
 from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score
 
@@ -62,6 +63,8 @@ if str(PROJECT_ROOT) not in sys.path:
 from moduli.preprocessing import (
     build_koppen_features,
     build_raw_features,
+    build_temp_rain_pca_features,
+    find_temperature_rainfall_columns,
     prepare_model_data,
 )
 
@@ -111,10 +114,12 @@ DATA_PATH = DATA_ROOT / "df_valid.csv"
 VEGETATION_PATH = DATA_ROOT / "vegetacija.csv"
 LEGEND_PATH = DATA_ROOT / "Vegetacija" / "u2018_clc2018_v2020_20u1_raster100m" / "Legend" / "CLC2018_CLC2018_V2018_20_QGIS.txt"
 
-SUMMARY_PATH = PROJECT_ROOT / "experiments" / "results" / "stage1_sweep_summary.csv"
-OUTPUT_RUNS_PATH = PROJECT_ROOT / "experiments" / "results" / "stage2_validation_runs.csv"
-OUTPUT_SUMMARY_PATH = PROJECT_ROOT / "experiments" / "results" / "stage2_validation_summary.csv"
-LOG_PATH = PROJECT_ROOT / "experiments" / "results" / "stage2_validation.log"
+RESULT_DIR = PROJECT_ROOT / "experiments" / "results"
+SUMMARY_PATH = "stage1_sweep_summary.csv"
+OUTPUT_RUNS_PATH = "stage2_validation_runs.csv"
+OUTPUT_SUMMARY_PATH = "stage2_validation_summary.csv"
+OUTPUT_STATS_PATH = "stage2_validation_stats.csv"
+LOG_PATH = "stage2_validation.log"
 
 MODE = "superpixels"
 FEATURE_MODE = "koppen"
@@ -125,7 +130,7 @@ K_NEIGHBORS = 16
 N_ANTS = 15
 N_ITERATIONS = 20
 
-DEFAULT_SEEDS = "0,1"
+DEFAULT_SEEDS = "0,1,2,3,4"
 
 COMMON_FITNESS_KWARGS = {
     "w_compactness": 0.7,
@@ -207,6 +212,16 @@ def append_csv(path: Path, rows: list[dict], sep: str = ";"):
     )
 
 
+def feature_result_dir(feature_mode: str) -> Path:
+    return RESULT_DIR / feature_mode
+
+
+def resolve_result_path(path_text: str | None, feature_mode: str, filename: str) -> Path:
+    if path_text:
+        return Path(path_text)
+    return feature_result_dir(feature_mode) / filename
+
+
 def parse_seeds(seed_text: str) -> list[int]:
     return [int(x.strip()) for x in seed_text.split(",") if x.strip() != ""]
 
@@ -220,6 +235,8 @@ def config_key(row, seed: int):
         float(row["evaporation"]),
         float(row["q"]),
         int(seed),
+        str(row.get("feature_mode", FEATURE_MODE)),
+        str(row.get("mode", MODE)),
     )
 
 
@@ -240,6 +257,67 @@ def load_completed_run_keys(path: Path):
     return keys
 
 
+def stage1_fitness_column(summary: pd.DataFrame) -> str:
+    for col in ["mean_fitness", "mean_best_fitness", "mean_recomputed_fitness"]:
+        if col in summary.columns:
+            return col
+    raise ValueError(
+        "Stage 1 summary must contain one of: mean_fitness, "
+        "mean_best_fitness, mean_recomputed_fitness."
+    )
+
+
+def deduplicate_validation_runs(runs: pd.DataFrame) -> pd.DataFrame:
+    key_cols = ["algorithm", "pheromone_update", "alpha", "beta", "evaporation", "q", "seed"]
+    for optional_col in ["feature_mode", "mode"]:
+        if optional_col in runs.columns:
+            key_cols.append(optional_col)
+
+    return runs.drop_duplicates(key_cols, keep="last").reset_index(drop=True)
+
+
+def select_validation_candidates(
+    summary: pd.DataFrame,
+    fitness_col: str,
+    fitness_threshold: float,
+    top_n: int,
+    top_n_per_algorithm: int,
+) -> pd.DataFrame:
+    candidates = summary[summary[fitness_col] < fitness_threshold].copy()
+    candidates = candidates.sort_values(fitness_col)
+
+    selected_parts = []
+
+    if top_n is not None and top_n > 0:
+        selected_parts.append(candidates.head(top_n))
+    elif top_n == -1:
+        selected_parts.append(candidates)
+
+    if top_n_per_algorithm is not None and top_n_per_algorithm > 0:
+        selected_parts.append(
+            candidates
+            .groupby("algorithm", group_keys=False, dropna=False)
+            .head(top_n_per_algorithm)
+        )
+
+    if selected_parts:
+        selected = pd.concat(selected_parts, ignore_index=True)
+    else:
+        selected = candidates
+
+    key_cols = ["algorithm", "pheromone_update", "alpha", "beta", "evaporation", "q"]
+    for optional_col in ["feature_mode", "mode"]:
+        if optional_col in selected.columns:
+            key_cols.append(optional_col)
+
+    return (
+        selected
+        .drop_duplicates(key_cols, keep="first")
+        .sort_values(fitness_col)
+        .reset_index(drop=True)
+    )
+
+
 def load_problem(data_path: Path, feature_mode: str, mode: str, target_size: int, k_neighbors: int):
     df = pd.read_csv(data_path, index_col=0)
 
@@ -247,8 +325,23 @@ def load_problem(data_path: Path, feature_mode: str, mode: str, target_size: int
         X_features, feature_names = build_koppen_features(df)
     elif feature_mode == "raw":
         X_features, feature_names = build_raw_features(df)
+    elif feature_mode == "pca":
+        feature_cols = build_raw_features(df)[1]
+        temp_cols, rain_cols = find_temperature_rainfall_columns(
+            df,
+            feature_cols=feature_cols,
+        )
+        X_features, feature_names, _ = build_temp_rain_pca_features(
+            df,
+            temp_cols=temp_cols,
+            rain_cols=rain_cols,
+            n_temp=2,
+            n_rain=2,
+            scale_method="minmax",
+            final_scale=True,
+        )
     else:
-        raise ValueError("feature_mode must be 'koppen' or 'raw'.")
+        raise ValueError("feature_mode must be 'koppen', 'raw', or 'pca'.")
 
     data = prepare_model_data(
         df=df,
@@ -445,7 +538,7 @@ def evaluate_land_use(labels, data_df, node_col, vegetation, legend):
     return overall, per_cluster
 
 
-def run_one(row, seed, data, kmeans, vegetation, legend):
+def run_one(row, seed, data, kmeans, vegetation, legend, feature_mode: str, mode: str):
     X = data["X_model"]
     neighbors = data["neighbors"]
     weights = data["weights"]
@@ -514,9 +607,11 @@ def run_one(row, seed, data, kmeans, vegetation, legend):
         "beta": beta,
         "evaporation": evaporation,
         "q": q,
+        "feature_mode": feature_mode,
+        "mode": mode,
         "seed": seed,
-        "stage1_mean_fitness": float(row.get("mean_fitness", np.nan)),
-        "stage1_best_fitness": float(row.get("best_fitness", np.nan)),
+        "stage1_mean_fitness": float(row.get("mean_fitness", row.get("mean_best_fitness", np.nan))),
+        "stage1_best_fitness": float(row.get("best_fitness", row.get("best_best_fitness", np.nan))),
         "best_fitness": float(opt.best_fitness_),
         "recomputed_fitness": float(recomputed_fitness),
         "ari_vs_kmeans": float(adjusted_rand_score(kmeans.labels_, labels)),
@@ -537,9 +632,12 @@ def run_one(row, seed, data, kmeans, vegetation, legend):
 
 
 def rebuild_validation_summary(runs_path: Path, summary_path: Path, sep: str = ";"):
-    runs = read_csv_auto(runs_path)
+    runs = deduplicate_validation_runs(read_csv_auto(runs_path))
 
     group_cols = ["algorithm", "pheromone_update", "alpha", "beta", "evaporation", "q"]
+    for optional_col in ["feature_mode", "mode"]:
+        if optional_col in runs.columns:
+            group_cols.append(optional_col)
 
     metric_cols = [
         "best_fitness",
@@ -581,11 +679,136 @@ def rebuild_validation_summary(runs_path: Path, summary_path: Path, sep: str = "
     return summary
 
 
+def _paired_test_values(a: pd.Series, b: pd.Series):
+    diffs = (a.to_numpy(dtype=float) - b.to_numpy(dtype=float))
+    diffs = diffs[np.isfinite(diffs)]
+
+    if len(diffs) < 2:
+        return {
+            "n_pairs": int(len(diffs)),
+            "mean_diff": np.nan,
+            "median_diff": np.nan,
+            "std_diff": np.nan,
+            "cohen_dz": np.nan,
+            "paired_t_stat": np.nan,
+            "paired_t_p": np.nan,
+            "wilcoxon_stat": np.nan,
+            "wilcoxon_p": np.nan,
+        }
+
+    std_diff = float(np.std(diffs, ddof=1)) if len(diffs) > 1 else np.nan
+    mean_diff = float(np.mean(diffs))
+
+    try:
+        t_res = stats.ttest_rel(a, b, nan_policy="omit")
+        paired_t_stat = float(t_res.statistic)
+        paired_t_p = float(t_res.pvalue)
+    except Exception:
+        paired_t_stat = np.nan
+        paired_t_p = np.nan
+
+    try:
+        if np.allclose(diffs, 0.0):
+            wilcoxon_stat = 0.0
+            wilcoxon_p = 1.0
+        else:
+            w_res = stats.wilcoxon(diffs, zero_method="wilcox", alternative="two-sided")
+            wilcoxon_stat = float(w_res.statistic)
+            wilcoxon_p = float(w_res.pvalue)
+    except Exception:
+        wilcoxon_stat = np.nan
+        wilcoxon_p = np.nan
+
+    return {
+        "n_pairs": int(len(diffs)),
+        "mean_diff": mean_diff,
+        "median_diff": float(np.median(diffs)),
+        "std_diff": std_diff,
+        "cohen_dz": mean_diff / std_diff if std_diff and np.isfinite(std_diff) else np.nan,
+        "paired_t_stat": paired_t_stat,
+        "paired_t_p": paired_t_p,
+        "wilcoxon_stat": wilcoxon_stat,
+        "wilcoxon_p": wilcoxon_p,
+    }
+
+
+def rebuild_significance_stats(runs_path: Path, stats_path: Path, sep: str = ";"):
+    runs = deduplicate_validation_runs(read_csv_auto(runs_path))
+
+    config_cols = ["algorithm", "pheromone_update", "alpha", "beta", "evaporation", "q"]
+    for optional_col in ["feature_mode", "mode"]:
+        if optional_col in runs.columns:
+            config_cols.append(optional_col)
+
+    metric_cols = [
+        "best_fitness",
+        "recomputed_fitness",
+        "compactness",
+        "spatial",
+        "ari_vs_kmeans",
+        "weighted_combined_ecological_consistency",
+        "mean_combined_ecological_consistency",
+        "weighted_agriculture_homogeneity",
+        "weighted_natural_homogeneity",
+        "weighted_artificial_share_total",
+        "runtime_sec",
+    ]
+    metric_cols = [c for c in metric_cols if c in runs.columns]
+
+    configs = (
+        runs[config_cols]
+        .drop_duplicates()
+        .sort_values(config_cols)
+        .reset_index(drop=True)
+    )
+
+    rows = []
+    for i in range(len(configs)):
+        cfg_a = configs.iloc[i]
+        mask_a = np.ones(len(runs), dtype=bool)
+        for col in config_cols:
+            mask_a &= runs[col] == cfg_a[col]
+
+        for j in range(i + 1, len(configs)):
+            cfg_b = configs.iloc[j]
+            mask_b = np.ones(len(runs), dtype=bool)
+            for col in config_cols:
+                mask_b &= runs[col] == cfg_b[col]
+
+            a = runs.loc[mask_a, ["seed", *metric_cols]]
+            b = runs.loc[mask_b, ["seed", *metric_cols]]
+            paired = a.merge(b, on="seed", suffixes=("_a", "_b"))
+
+            if paired.empty:
+                continue
+
+            base = {}
+            for col in config_cols:
+                base[f"{col}_a"] = cfg_a[col]
+                base[f"{col}_b"] = cfg_b[col]
+
+            for metric in metric_cols:
+                values = _paired_test_values(paired[f"{metric}_a"], paired[f"{metric}_b"])
+                rows.append({
+                    **base,
+                    "metric": metric,
+                    **values,
+                })
+
+    stats_df = pd.DataFrame(rows)
+    if not stats_df.empty:
+        stats_df = stats_df.sort_values(["metric", "wilcoxon_p", "paired_t_p"], na_position="last")
+
+    stats_df.to_csv(stats_path, index=False, sep=sep)
+    return stats_df
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Stage 2 validation for top Stage 1 configurations.")
 
-    parser.add_argument("--stage1-summary", type=str, default=str(SUMMARY_PATH))
+    parser.add_argument("--stage1-summary", type=str, default=None)
     parser.add_argument("--top-n", type=int, default=20, help="Number of top configs to validate. Use -1 for all after threshold.")
+    parser.add_argument("--top-n-per-algorithm", type=int, default=0, help="Also include the top N configs within each algorithm family.")
     parser.add_argument("--fitness-threshold", type=float, default=0.36)
     parser.add_argument("--seeds", type=str, default=DEFAULT_SEEDS)
 
@@ -598,9 +821,10 @@ def parse_args():
     parser.add_argument("--target-size", type=int, default=TARGET_SIZE)
     parser.add_argument("--k-neighbors", type=int, default=K_NEIGHBORS)
 
-    parser.add_argument("--output-runs", type=str, default=str(OUTPUT_RUNS_PATH))
-    parser.add_argument("--output-summary", type=str, default=str(OUTPUT_SUMMARY_PATH))
-    parser.add_argument("--log-path", type=str, default=str(LOG_PATH))
+    parser.add_argument("--output-runs", type=str, default=None)
+    parser.add_argument("--output-summary", type=str, default=None)
+    parser.add_argument("--output-stats", type=str, default=None)
+    parser.add_argument("--log-path", type=str, default=None)
     parser.add_argument("--save-every", type=int, default=1)
     parser.add_argument("--sep-output", type=str, default=";")
     parser.add_argument("--no-resume", action="store_true")
@@ -612,27 +836,33 @@ def parse_args():
 def main():
     args = parse_args()
 
-    logger = setup_logging(Path(args.log_path))
+    stage1_summary_path = resolve_result_path(args.stage1_summary, args.feature_mode, SUMMARY_PATH)
+    output_runs_path = resolve_result_path(args.output_runs, args.feature_mode, OUTPUT_RUNS_PATH)
+    output_summary_path = resolve_result_path(args.output_summary, args.feature_mode, OUTPUT_SUMMARY_PATH)
+    output_stats_path = resolve_result_path(args.output_stats, args.feature_mode, OUTPUT_STATS_PATH)
+    log_path = resolve_result_path(args.log_path, args.feature_mode, LOG_PATH)
 
-    stage1_summary_path = Path(args.stage1_summary)
-    output_runs_path = Path(args.output_runs)
-    output_summary_path = Path(args.output_summary)
+    logger = setup_logging(log_path)
 
     seeds = parse_seeds(args.seeds)
 
     logger.info("Reading Stage 1 summary: %s", stage1_summary_path)
     summary = read_csv_auto(stage1_summary_path)
 
-    if "mean_fitness" not in summary.columns:
-        raise ValueError("Stage 1 summary must contain a mean_fitness column.")
+    fitness_col = stage1_fitness_column(summary)
+    logger.info("Using Stage 1 fitness column for filtering/sorting: %s", fitness_col)
 
-    candidates = summary[summary["mean_fitness"] < args.fitness_threshold].copy()
-    candidates = candidates.sort_values("mean_fitness")
-
-    if args.top_n is not None and args.top_n > 0:
-        candidates = candidates.head(args.top_n)
+    candidates = select_validation_candidates(
+        summary=summary,
+        fitness_col=fitness_col,
+        fitness_threshold=args.fitness_threshold,
+        top_n=args.top_n,
+        top_n_per_algorithm=args.top_n_per_algorithm,
+    )
 
     logger.info("Candidate configs after threshold/top-n: %s", len(candidates))
+    if args.top_n_per_algorithm > 0:
+        logger.info("Included up to %s configs per algorithm family.", args.top_n_per_algorithm)
     logger.info("Seeds: %s", seeds)
 
     expanded = []
@@ -702,6 +932,8 @@ def main():
                 kmeans=kmeans,
                 vegetation=vegetation,
                 legend=legend,
+                feature_mode=args.feature_mode,
+                mode=args.mode,
             )
             buffer.append(result)
 
@@ -723,6 +955,8 @@ def main():
                 "beta": row.get("beta"),
                 "evaporation": row.get("evaporation"),
                 "q": row.get("q"),
+                "feature_mode": args.feature_mode,
+                "mode": args.mode,
                 "seed": seed,
                 "error": repr(e),
             }
@@ -750,6 +984,14 @@ def main():
 
     logger.info("Top validation summary rows:")
     logger.info("\n%s", validation_summary.head(20).to_string(index=False))
+
+    logger.info("Rebuilding significance statistics...")
+    stats_summary = rebuild_significance_stats(
+        runs_path=output_runs_path,
+        stats_path=output_stats_path,
+        sep=args.sep_output,
+    )
+    logger.info("Wrote %s statistical comparison rows to %s", len(stats_summary), output_stats_path)
     logger.info("Done.")
 
 

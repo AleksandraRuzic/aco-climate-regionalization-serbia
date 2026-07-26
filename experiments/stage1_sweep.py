@@ -87,6 +87,8 @@ if str(PROJECT_ROOT) not in sys.path:
 from moduli.preprocessing import (
     build_koppen_features,
     build_raw_features,
+    build_temp_rain_pca_features,
+    find_temperature_rainfall_columns,
     prepare_model_data,
 )
 
@@ -145,11 +147,11 @@ LEGEND_PATH = (
 )
 
 RESULT_DIR = PROJECT_ROOT / "experiments" / "results"
-RESULT_PATH = RESULT_DIR / "stage1_sweep_runs.csv"
-FAILURE_PATH = RESULT_DIR / "stage1_sweep_failures.csv"
-SUMMARY_PATH = RESULT_DIR / "stage1_sweep_summary.csv"
-LOG_PATH = RESULT_DIR / "stage1_sweep.log"
-KMEANS_PATH = RESULT_DIR / "stage1_kmeans_baseline.csv"
+RESULT_PATH = "stage1_sweep_runs.csv"
+FAILURE_PATH = "stage1_sweep_failures.csv"
+SUMMARY_PATH = "stage1_sweep_summary.csv"
+LOG_PATH = "stage1_sweep.log"
+KMEANS_PATH = "stage1_kmeans_baseline.csv"
 
 MODE = "superpixels"
 FEATURE_MODE = "koppen"
@@ -252,6 +254,16 @@ def append_csv(path: Path, rows: list[dict], sep: str = CSV_SEP) -> None:
     )
 
 
+def feature_result_dir(feature_mode: str) -> Path:
+    return RESULT_DIR / feature_mode
+
+
+def resolve_result_path(path_text: str | None, feature_mode: str, filename: str) -> Path:
+    if path_text:
+        return Path(path_text)
+    return feature_result_dir(feature_mode) / filename
+
+
 def sanitize_for_json(obj):
     if callable(obj):
         return getattr(obj, "__name__", str(obj))
@@ -338,8 +350,23 @@ def load_problem(
         X_features, feature_names = build_koppen_features(df)
     elif feature_mode == "raw":
         X_features, feature_names = build_raw_features(df)
+    elif feature_mode == "pca":
+        feature_cols = build_raw_features(df)[1]
+        temp_cols, rain_cols = find_temperature_rainfall_columns(
+            df,
+            feature_cols=feature_cols,
+        )
+        X_features, feature_names, _ = build_temp_rain_pca_features(
+            df,
+            temp_cols=temp_cols,
+            rain_cols=rain_cols,
+            n_temp=2,
+            n_rain=2,
+            scale_method="minmax",
+            final_scale=True,
+        )
     else:
-        raise ValueError("feature_mode must be 'koppen' or 'raw'.")
+        raise ValueError("feature_mode must be 'koppen', 'raw', or 'pca'.")
 
     data = prepare_model_data(
         df=df,
@@ -861,7 +888,7 @@ def parse_args():
     parser.add_argument("--vegetation-path", type=str, default=str(VEGETATION_PATH))
     parser.add_argument("--legend-path", type=str, default=str(LEGEND_PATH))
 
-    parser.add_argument("--feature-mode", type=str, default=FEATURE_MODE, choices=["koppen", "raw"])
+    parser.add_argument("--feature-mode", type=str, default=FEATURE_MODE, choices=["koppen", "raw", "pca"])
     parser.add_argument("--mode", type=str, default=MODE, choices=["superpixels", "pixels"])
 
     parser.add_argument("--alphas", type=str, default=",".join(map(str, ALPHAS)))
@@ -870,11 +897,11 @@ def parse_args():
     parser.add_argument("--qs", type=str, default=",".join(map(str, QS)))
     parser.add_argument("--seeds", type=str, default=",".join(map(str, SEEDS)))
 
-    parser.add_argument("--results-path", type=str, default=str(RESULT_PATH))
-    parser.add_argument("--failures-path", type=str, default=str(FAILURE_PATH))
-    parser.add_argument("--summary-path", type=str, default=str(SUMMARY_PATH))
-    parser.add_argument("--kmeans-path", type=str, default=str(KMEANS_PATH))
-    parser.add_argument("--log-path", type=str, default=str(LOG_PATH))
+    parser.add_argument("--results-path", type=str, default=None)
+    parser.add_argument("--failures-path", type=str, default=None)
+    parser.add_argument("--summary-path", type=str, default=None)
+    parser.add_argument("--kmeans-path", type=str, default=None)
+    parser.add_argument("--log-path", type=str, default=None)
 
     parser.add_argument("--save-every", type=int, default=SAVE_EVERY)
     parser.add_argument("--max-runs", type=int, default=MAX_RUNS)
@@ -891,11 +918,11 @@ def parse_args():
 def main():
     args = parse_args()
 
-    result_path = Path(args.results_path)
-    failure_path = Path(args.failures_path)
-    summary_path = Path(args.summary_path)
-    kmeans_path = Path(args.kmeans_path)
-    log_path = Path(args.log_path)
+    result_path = resolve_result_path(args.results_path, args.feature_mode, RESULT_PATH)
+    failure_path = resolve_result_path(args.failures_path, args.feature_mode, FAILURE_PATH)
+    summary_path = resolve_result_path(args.summary_path, args.feature_mode, SUMMARY_PATH)
+    kmeans_path = resolve_result_path(args.kmeans_path, args.feature_mode, KMEANS_PATH)
+    log_path = resolve_result_path(args.log_path, args.feature_mode, LOG_PATH)
 
     logger = setup_logging(log_path)
 
@@ -929,16 +956,17 @@ def main():
     logger.info("KMeans fitness: %.6f", kmeans_fit)
     logger.info("KMeans terms: %s", kmeans_terms)
 
-    write_kmeans_baseline(
-        path=kmeans_path,
-        data=data,
-        kmeans=kmeans,
-        kmeans_fit=kmeans_fit,
-        kmeans_terms=kmeans_terms,
-        vegetation=vegetation,
-        legend=legend,
-    )
-    logger.info("Wrote KMeans baseline to %s", kmeans_path)
+    if not args.dry_run:
+        write_kmeans_baseline(
+            path=kmeans_path,
+            data=data,
+            kmeans=kmeans,
+            kmeans_fit=kmeans_fit,
+            kmeans_terms=kmeans_terms,
+            vegetation=vegetation,
+            legend=legend,
+        )
+        logger.info("Wrote KMeans baseline to %s", kmeans_path)
 
     configs = list(
         iter_experiment_configs(

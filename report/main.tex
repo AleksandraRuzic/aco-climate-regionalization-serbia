@@ -214,7 +214,7 @@ Depending on the selected mode, one optimization node may represent either a sin
 One of the goals of the project is to investigate how different feature representations affect the quality of climate regionalization. For this reason the preprocessing module supports three different feature sets.
 
 \textbf{Raw climate variables} \\
-The simplest representation uses all climate variables directly. Every raster layer becomes one feature, resulting in a feature vector containing all available temperature and precipitation variables. This representation preserves all available information but also contains a large number of correlated variables. This hasn't been tested thouroghly.
+The simplest representation uses all climate variables directly. Every raster layer becomes one feature, resulting in a feature vector containing all available temperature and precipitation variables. This representation preserves all available information but also contains a large number of correlated variables. In the later experiments this representation is used together with the Köppen-inspired and PCA representations in order to test whether the conclusions depend on feature construction.
 
 \textbf{Köppen-inspired features} \\
 Instead of using all climate variables directly, the second option constructs a smaller set of summary statistics inspired by the Köppen climate classification. The following quantities are computed separately for every spatial location:
@@ -231,10 +231,10 @@ Instead of using all climate variables directly, the second option constructs a 
   \item precipitation range
 \end{itemize}
 
-Additional optional variables such as temperature standard deviation, precipitation standard deviation and a simple dryness index are also implemented, although they were not used in the current experiments. This mode was used in all of the test runs shown in this report.
+Additional optional variables such as temperature standard deviation, precipitation standard deviation and a simple dryness index are also implemented, although they were not used in the current experiments. This mode was the initial feature representation and is used as the main reference feature set in the report.
 
 \textbf{PCA features} \\
-The third option applies Principal Component Analysis separately to temperature and precipitation variables. Instead of combining all variables into a single PCA model, the two groups are transformed independently, producing separate principal components for temperature and precipitation. This preserves the distinction between the two climate components while still reducing dimensionality. Although this functionality is implemented, it has not yet been fully evaluated and will be investigated in future experiments.
+The third option applies Principal Component Analysis separately to temperature and precipitation variables. Instead of combining all variables into a single PCA model, the two groups are transformed independently, producing separate principal components for temperature and precipitation. This preserves the distinction between the two climate components while still reducing dimensionality. This representation was evaluated using the same Stage 1 sweep and Stage 2 validation protocol as the other feature representations.
 
 \subsubsection{Superpixel generation}
 The preprocessing module supports two optimization modes. In pixel mode, every original raster cell becomes one optimization node. In superpixel mode, neighboring pixels are first grouped into larger spatial units using MiniBatch K-Means applied only to spatial coordinates. The average climate values of all pixels belonging to one superpixel become the feature vector of the new optimization node. Since every graph node represents a different number of original raster cells, the size of each superpixel is stored as a node weight, allowing larger regions to contribute proportionally during optimization, when cluster centroids and fitness values are calculated. 
@@ -781,6 +781,12 @@ The graph and cohesion variants achieve considerably higher fitness values and l
 
 Overall, the results indicate that the centroid heuristic is much more suitable for this problem than the graph or cohesion heuristics. For the remaining analysis, the centroid-based algorithms therefore receive the most attention.
 
+\subsubsection{Learning behavior}
+
+The final average values do not fully describe how the algorithms reach their solutions. The simplest ACO Centroid strategy does not show a long learning curve in the usual sense. In most runs it starts almost immediately near a good fitness value, around 0.28, and reaches a plateau after only a small number of iterations. This suggests that the centroid heuristic itself already gives very strong assignment information, so pheromone learning has relatively little room to improve the solution.
+
+Other competitive strategies show a more standard optimization trajectory. ACO Centroid + Refinement is the clearest example: it can start with much worse solutions, with fitness values close to 0.9, and then drop toward values around 0.2 during the run. In this case the optimization process and refinement step visibly improve the solution over time. This distinction is important for interpretation. The centroid strategy achieves strong final performance, but much of that performance comes from the construction heuristic being strong from the beginning, while the refinement-based strategies show a more explicit learning and improvement process.
+
 The influence of the pheromone update strategy was also investigated. Three update methods were tested: updating all ants, updating only the best ant and quality-weighted updates. Table~\ref{tab:pheromone_comparison} summarizes the average results.
 
 \begin{table}[ht]
@@ -922,6 +928,97 @@ ACO Cohesion + Refinement & 1 & 0 \\
 
 These results confirm the conclusions from the previous sections. The centroid-based construction strategy consistently produces the strongest solutions, regardless of the evaluation metric. 
 
+\subsection{Sensitivity to feature representation}
+
+The initial sweep was performed using the Köppen-inspired feature representation. To test whether the conclusions depend on this particular feature set, the same Stage 1 protocol was repeated using raw climate variables and PCA features. Each feature representation was evaluated using 252 parameter configurations. Table~\ref{tab:feature_representation_stats} summarizes the overall Stage 1 results.
+
+\begin{table}[ht]
+\centering
+\caption{Stage 1 results for different feature representations. Fitness is minimized, while ecological consistency is maximized.}
+\label{tab:feature_representation_stats}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccc}
+\hline
+\textbf{Feature set} & \textbf{Best fitness} & \textbf{Mean fitness} & \textbf{Best ecology} & \textbf{Mean ecology} & \textbf{Ecology std.} \\
+\hline
+Köppen-inspired & 0.2325 & 0.4613 & 0.4846 & 0.4448 & 0.0264 \\
+Raw climate variables & 0.2332 & 0.4843 & 0.4831 & 0.4413 & 0.0258 \\
+PCA features & 0.3037 & 0.6306 & 0.4671 & 0.4294 & 0.0237 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+The raw climate representation produces results very similar to the Köppen-inspired representation. The best fitness values are almost identical, and the best ecological consistency values are also close. PCA performs worse in absolute terms: both the best fitness and the best ecological consistency are worse than for the other two representations. This suggests that the PCA representation used here removes some information that is useful for the current objective or for ecological consistency.
+
+More importantly, the ranking of construction strategies remains stable across feature sets. Table~\ref{tab:feature_algorithm_comparison} shows the average fitness and ecological consistency of the three strongest algorithm families for each representation.
+
+\begin{table}[ht]
+\centering
+\caption{Best algorithm families across feature representations.}
+\label{tab:feature_algorithm_comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llcc}
+\hline
+\textbf{Feature set} & \textbf{Algorithm} & \textbf{Mean fitness} & \textbf{Mean ecology} \\
+\hline
+Köppen-inspired & ACO Centroid & 0.2701 & 0.4700 \\
+Köppen-inspired & ACO Centroid + Refinement & 0.3141 & 0.4683 \\
+Köppen-inspired & Multi-colony Centroid Graph Spatial & 0.3577 & 0.4535 \\
+\hline
+Raw climate variables & ACO Centroid & 0.2831 & 0.4671 \\
+Raw climate variables & ACO Centroid + Refinement & 0.3354 & 0.4618 \\
+Raw climate variables & Multi-colony Centroid Graph Spatial & 0.3672 & 0.4528 \\
+\hline
+PCA features & ACO Centroid & 0.4004 & 0.4556 \\
+PCA features & ACO Centroid + Refinement & 0.5243 & 0.4426 \\
+PCA features & Multi-colony Centroid Graph Spatial & 0.5279 & 0.4403 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+In all three cases, centroid-based construction remains the strongest strategy. This supports the conclusion that the observed superiority of centroid-based construction is not an artifact of using only the Köppen-inspired feature set. However, this conclusion still applies under the current fitness function, whose compactness component is itself centroid-based.
+
+\subsection{Multi-seed validation and statistical testing}
+
+Because the Stage 1 sweep used only two seeds per configuration, the best configurations were validated using five seeds. The validation step was used to check whether the ranking of top configurations is stable enough to support claims about parameter effects. For all feature representations, validation candidates were selected using the same rule: configurations first had to pass the Stage 1 fitness threshold, after which the best overall configurations and additional top configurations per algorithm family were selected from that filtered set.
+
+Table~\ref{tab:stage2_validation_summary} shows the best validated configurations by fitness and by ecological consistency for each feature representation.
+
+\begin{table}[ht]
+\centering
+\caption{Best Stage 2 validated configurations. Fitness is minimized and ecological consistency is maximized.}
+\label{tab:stage2_validation_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllcc}
+\hline
+\textbf{Feature set} & \textbf{Criterion} & \textbf{Best validated configuration} & \textbf{Fitness} & \textbf{Ecology} \\
+\hline
+Köppen-inspired & Fitness & ACO Centroid, best ant, $\alpha=1$, $\beta=3$, evap.=0.10 & 0.2294 & 0.4723 \\
+Köppen-inspired & Ecology & ACO Centroid, best ant, $\alpha=0.75$, $\beta=3$, evap.=0.02 & 0.2325 & 0.4727 \\
+\hline
+Raw climate variables & Fitness & ACO Centroid, best ant, $\alpha=1$, $\beta=3$, evap.=0.10 & 0.2337 & 0.4647 \\
+Raw climate variables & Ecology & ACO Centroid + Refinement, all ants, $\alpha=0.75$, $\beta=3$, evap.=0.02 & 0.2474 & 0.4743 \\
+\hline
+PCA features & Fitness & ACO Centroid, best ant, $\alpha=1$, $\beta=3$, evap.=0.10 & 0.3061 & 0.4587 \\
+PCA features & Ecology & ACO Centroid + Refinement, all ants, $\alpha=0.75$, $\beta=3$, evap.=0.10 & 0.3169 & 0.4633 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+The validation results are consistent with Stage 1. The best raw and PCA fitness configurations remain centroid-based, and the best ecological configurations remain within the centroid or centroid-refinement family. The same broad conclusion was observed for the Köppen-inspired representation.
+
+However, the statistical tests require caution. Pairwise paired t-tests often indicate differences between centroid-based and non-centroid configurations, especially for the raw and PCA balanced validation sets. In contrast, the Wilcoxon signed-rank test did not produce any pairwise difference with $p<0.05$ for fitness or ecological consistency. With only five paired seeds, the Wilcoxon test has very low resolution; in many comparisons the smallest attainable two-sided $p$-value is 0.0625. Therefore, the validation supports broad qualitative conclusions about strategy families, but it does not justify strong claims that one top configuration is statistically superior to another.
+
+The main validated conclusions are:
+\begin{itemize}
+  \item the top individual configurations are not statistically separated enough to make strong claims about fine parameter choices;
+  \item the advantage of centroid-based construction remains visible after changing the feature representation;
+  \item the current conclusion about centroid superiority must still be interpreted in relation to the current centroid-compactness fitness function.
+\end{itemize}
+
 
 \subsection{Visual comparison of regionalizations}
 
@@ -963,9 +1060,7 @@ Overall, the visual comparison shows that the proposed optimization framework pr
 
 This project currently provides a framework for climate regionalization using Ant Colony Optimization. Several directions for future work could follow.
 
-The first direction is to investigate different representations of the climate data. In this work, every location is described using 31 climate variables. Other feature representations, such as dimensionality reduction techniques, seasonal summaries or standardized climate variables, may produce different regionalizations and should be investigated.
-
-Another important direction is the development of alternative fitness functions. The current fitness function is largely based on centroid compactness and spatial coherence. Since the centroid-based algorithms consistently achieved the best results, it would be interesting to investigate whether this conclusion still holds when using fitness functions based on different clustering principles.
+An important direction is the development of alternative fitness functions. The current fitness function is largely based on centroid compactness and spatial coherence. Since the centroid-based algorithms consistently achieved the best results under this objective, the next experiments should test fitness functions that are not directly aligned with centroid construction, such as silhouette-like cohesion/separation measures or graph-modularity-based criteria.
 
 The ecological consistency measure developed in this work could also be incorporated directly into the optimization process. Instead of using it only for evaluation, future work could formulate climate regionalization as a multi-objective optimization problem that simultaneously optimizes both the fitness function and ecological consistency.
 
@@ -981,9 +1076,13 @@ A complete processing pipeline was developed, starting from raw climate raster l
 
 Several ACO variants were compared during the experimental evaluation. The results showed that the choice of construction strategy has the largest influence on the final solution. Centroid-based algorithms consistently achieved the best results, while graph and cohesion based approaches produced lower optimization quality and ecological consistency. Among the tested parameters, the heuristic weight ($\beta$) had the strongest influence, whereas the evaporation rate had only a small effect on the final regionalizations.
 
+The experiment was also repeated using raw climate variables and PCA features. The broad ranking of construction strategies remained stable across feature representations: centroid-based methods were still strongest. This indicates that the conclusion is not only an artifact of the Köppen-inspired feature set. At the same time, the conclusion remains tied to the current fitness function, because its compactness term is centroid-based.
+
 An important contribution of this work is the proposed ecological consistency metric based on the CORINE Land Cover dataset. Unlike the optimization objective, which measures compactness and spatial properties of the obtained clusters, the ecological consistency score evaluates how well the climate regions correspond to an independent environmental dataset. The experiments showed that these two measures do not always identify the same best solutions. This demonstrates that external validation provides useful additional information when selecting the final climate regionalization.
 
 The obtained regionalizations were also compared with the traditional Köppen-Geiger classification and the KMeans clustering algorithm. The proposed ACO framework produced solutions with better optimization quality than Köppen while also achieving higher ecological consistency. The best ecological ACO solution also slightly improved the ecological consistency of the KMeans baseline, demonstrating that the proposed optimization framework is capable of producing competitive climate regionalizations.
+
+The multi-seed validation step showed that top configurations are close to each other. With five seeds, Wilcoxon signed-rank tests did not provide enough evidence to claim statistically significant differences among the top configurations. Therefore, the safest conclusion is at the level of strategy families rather than individual parameter settings.
 
 Overall, the results show that Ant Colony Optimization is a suitable approach for climate regionalization. Although the centroid-based strategies proved to be the most effective within the tested framework, the developed methodology provides a flexible foundation for investigating alternative optimization objectives, construction strategies and validation methods in future research.
 
