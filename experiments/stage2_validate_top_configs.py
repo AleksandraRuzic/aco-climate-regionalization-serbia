@@ -70,7 +70,12 @@ from moduli.preprocessing import (
 
 from moduli.cluster_centroid_manipulation import compute_centroids
 from moduli.ant_clustering_optimizer import AntClusteringOptimizer
-from moduli.fitness_functions import fitness_weighted_sum
+from moduli.fitness_functions import (
+    fitness_weighted_sum,
+    silhouette_spatial_fitness,
+    snn_spatial_fitness,
+)
+from moduli.snn_graph import build_snn_graph
 from moduli.pheromone_updates import (
     initialize_node_cluster_pheromone,
     update_pheromone_all_ants,
@@ -131,9 +136,31 @@ N_ANTS = 15
 N_ITERATIONS = 20
 
 DEFAULT_SEEDS = "0,1,2,3,4"
+FITNESS_FUNCTIONS = ["centroid", "silhouette", "snn"]
+
+CENTROID_FITNESS_KWARGS = {
+    "w_compactness": 0.7,
+}
+
+SILHOUETTE_FITNESS_KWARGS = {
+    "w_silhouette": 0.7,
+    "use_full_dataset": False,
+    "sample_size": 100,
+    "min_same_cluster_sample": 1,
+    "full_cluster_fallback": False,
+    "random_state": 0,
+}
+
+SNN_GRAPH_KWARGS = {
+    "k": 20,
+    "min_shared_neighbors": 1,
+}
+
+SNN_FITNESS_KWARGS = {
+    "w_snn": 0.7,
+}
 
 COMMON_FITNESS_KWARGS = {
-    "w_compactness": 0.7,
     "w_spatial": 0.3,
     "spatial_symmetric": False,
 }
@@ -154,8 +181,11 @@ COMMON_PHEROMONE_UPDATE_KWARGS = {
 # Utility functions
 # =============================================================================
 
-def setup_logging(log_path: Path):
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+def setup_logging(log_path: Path | list[Path]):
+    log_paths = log_path if isinstance(log_path, list) else [log_path]
+    log_paths = list(dict.fromkeys(log_paths))
+    for path in log_paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
 
     logger = logging.getLogger("stage2_validation")
     logger.setLevel(logging.INFO)
@@ -166,9 +196,10 @@ def setup_logging(log_path: Path):
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    fh = logging.FileHandler(log_path, mode="a")
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
+    for path in log_paths:
+        fh = logging.FileHandler(path, mode="a")
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
     sh = logging.StreamHandler(sys.stdout)
     sh.setFormatter(formatter)
@@ -222,12 +253,41 @@ def resolve_result_path(path_text: str | None, feature_mode: str, filename: str)
     return feature_result_dir(feature_mode) / filename
 
 
+def resolve_fitness_result_path(
+    path_text: str | None,
+    feature_mode: str,
+    fitness_name: str,
+    filename: str,
+) -> Path:
+    if path_text:
+        path = Path(path_text)
+        return path.parent / fitness_name / path.name
+    return feature_result_dir(feature_mode) / fitness_name / filename
+
+
 def parse_seeds(seed_text: str) -> list[int]:
     return [int(x.strip()) for x in seed_text.split(",") if x.strip() != ""]
 
 
+def parse_fitness_functions(text: str) -> list[str]:
+    requested = [x.strip().lower() for x in text.split(",") if x.strip() != ""]
+
+    if not requested or requested == ["all"]:
+        return FITNESS_FUNCTIONS.copy()
+
+    unknown = sorted(set(requested) - set(FITNESS_FUNCTIONS))
+    if unknown:
+        raise ValueError(
+            "Unknown fitness function(s): "
+            f"{unknown}. Expected one or more of {FITNESS_FUNCTIONS}, or 'all'."
+        )
+
+    return requested
+
+
 def config_key(row, seed: int):
     return (
+        str(row.get("fitness_name", "centroid")),
         str(row["algorithm"]),
         str(row["pheromone_update"]),
         float(row["alpha"]),
@@ -269,6 +329,8 @@ def stage1_fitness_column(summary: pd.DataFrame) -> str:
 
 def deduplicate_validation_runs(runs: pd.DataFrame) -> pd.DataFrame:
     key_cols = ["algorithm", "pheromone_update", "alpha", "beta", "evaporation", "q", "seed"]
+    if "fitness_name" in runs.columns:
+        key_cols.insert(0, "fitness_name")
     for optional_col in ["feature_mode", "mode"]:
         if optional_col in runs.columns:
             key_cols.append(optional_col)
@@ -282,21 +344,36 @@ def select_validation_candidates(
     fitness_threshold: float,
     top_n: int,
     top_n_per_algorithm: int,
+    fitness_names: list[str],
 ) -> pd.DataFrame:
+    if "fitness_name" not in summary.columns:
+        expanded = []
+        for fitness_name in fitness_names:
+            part = summary.copy()
+            part["fitness_name"] = fitness_name
+            expanded.append(part)
+        summary = pd.concat(expanded, ignore_index=True)
+    else:
+        summary = summary[summary["fitness_name"].isin(fitness_names)].copy()
+
     candidates = summary[summary[fitness_col] < fitness_threshold].copy()
-    candidates = candidates.sort_values(fitness_col)
+    candidates = candidates.sort_values(["fitness_name", fitness_col])
 
     selected_parts = []
 
     if top_n is not None and top_n > 0:
-        selected_parts.append(candidates.head(top_n))
+        selected_parts.append(
+            candidates
+            .groupby("fitness_name", group_keys=False, dropna=False)
+            .head(top_n)
+        )
     elif top_n == -1:
         selected_parts.append(candidates)
 
     if top_n_per_algorithm is not None and top_n_per_algorithm > 0:
         selected_parts.append(
             candidates
-            .groupby("algorithm", group_keys=False, dropna=False)
+            .groupby(["fitness_name", "algorithm"], group_keys=False, dropna=False)
             .head(top_n_per_algorithm)
         )
 
@@ -306,6 +383,8 @@ def select_validation_candidates(
         selected = candidates
 
     key_cols = ["algorithm", "pheromone_update", "alpha", "beta", "evaporation", "q"]
+    if "fitness_name" in selected.columns:
+        key_cols.insert(0, "fitness_name")
     for optional_col in ["feature_mode", "mode"]:
         if optional_col in selected.columns:
             key_cols.append(optional_col)
@@ -313,9 +392,44 @@ def select_validation_candidates(
     return (
         selected
         .drop_duplicates(key_cols, keep="first")
-        .sort_values(fitness_col)
+        .sort_values(["fitness_name", fitness_col])
         .reset_index(drop=True)
     )
+
+
+def read_stage1_summaries(
+    path_text: str | None,
+    feature_mode: str,
+    fitness_names: list[str],
+) -> pd.DataFrame:
+    if path_text:
+        summary = read_csv_auto(Path(path_text))
+        if "fitness_name" not in summary.columns and len(fitness_names) == 1:
+            summary = summary.copy()
+            summary["fitness_name"] = fitness_names[0]
+        return summary
+
+    parts = []
+    for fitness_name in fitness_names:
+        path = resolve_fitness_result_path(None, feature_mode, fitness_name, SUMMARY_PATH)
+        if not path.exists():
+            continue
+
+        summary = read_csv_auto(path)
+        if "fitness_name" not in summary.columns:
+            summary = summary.copy()
+            summary["fitness_name"] = fitness_name
+        parts.append(summary)
+
+    if not parts:
+        fallback_path = resolve_result_path(None, feature_mode, SUMMARY_PATH)
+        summary = read_csv_auto(fallback_path)
+        if "fitness_name" not in summary.columns and len(fitness_names) == 1:
+            summary = summary.copy()
+            summary["fitness_name"] = fitness_names[0]
+        return summary
+
+    return pd.concat(parts, ignore_index=True)
 
 
 def load_problem(data_path: Path, feature_mode: str, mode: str, target_size: int, k_neighbors: int):
@@ -378,10 +492,73 @@ def compute_kmeans_baseline(X, neighbors, weights):
         centroids=centroids,
         weights=weights,
         neighbors=neighbors,
+        **CENTROID_FITNESS_KWARGS,
         **COMMON_FITNESS_KWARGS,
     )
 
     return kmeans, float(fit), terms
+
+
+def fitness_config(name: str, snn_graph):
+    if name == "centroid":
+        return fitness_weighted_sum, {
+            **CENTROID_FITNESS_KWARGS,
+            **COMMON_FITNESS_KWARGS,
+        }
+
+    if name == "silhouette":
+        return silhouette_spatial_fitness, {
+            **SILHOUETTE_FITNESS_KWARGS,
+            **COMMON_FITNESS_KWARGS,
+        }
+
+    if name == "snn":
+        return snn_spatial_fitness, {
+            **SNN_FITNESS_KWARGS,
+            "snn_graph": snn_graph,
+            **COMMON_FITNESS_KWARGS,
+        }
+
+    raise ValueError(f"Unknown fitness function: {name}")
+
+
+def compute_all_fitness_values(X, labels, centroids, weights, neighbors, snn_graph) -> dict:
+    centroid_fitness, _ = fitness_weighted_sum(
+        X=X,
+        labels=labels,
+        centroids=centroids,
+        weights=weights,
+        neighbors=neighbors,
+        **CENTROID_FITNESS_KWARGS,
+        **COMMON_FITNESS_KWARGS,
+    )
+
+    silhouette_fitness, _ = silhouette_spatial_fitness(
+        X=X,
+        labels=labels,
+        centroids=centroids,
+        weights=weights,
+        neighbors=neighbors,
+        **SILHOUETTE_FITNESS_KWARGS,
+        **COMMON_FITNESS_KWARGS,
+    )
+
+    snn_fitness, _ = snn_spatial_fitness(
+        X=X,
+        labels=labels,
+        centroids=centroids,
+        weights=weights,
+        neighbors=neighbors,
+        snn_graph=snn_graph,
+        **SNN_FITNESS_KWARGS,
+        **COMMON_FITNESS_KWARGS,
+    )
+
+    return {
+        "centroid_fitness": float(centroid_fitness),
+        "silhouette_fitness": float(silhouette_fitness),
+        "snn_fitness": float(snn_fitness),
+    }
 
 
 def pheromone_update_config(name: str):
@@ -538,11 +715,12 @@ def evaluate_land_use(labels, data_df, node_col, vegetation, legend):
     return overall, per_cluster
 
 
-def run_one(row, seed, data, kmeans, vegetation, legend, feature_mode: str, mode: str):
+def run_one(row, seed, data, kmeans, snn_graph, vegetation, legend, feature_mode: str, mode: str):
     X = data["X_model"]
     neighbors = data["neighbors"]
     weights = data["weights"]
 
+    fitness_name = str(row.get("fitness_name", "centroid"))
     algorithm = str(row["algorithm"])
     update_name = str(row["pheromone_update"])
     alpha = float(row["alpha"])
@@ -557,6 +735,7 @@ def run_one(row, seed, data, kmeans, vegetation, legend, feature_mode: str, mode
     )
 
     update_fn, update_kwargs = pheromone_update_config(update_name)
+    fit_fn, fit_kwargs = fitness_config(fitness_name, snn_graph)
 
     t0 = time.perf_counter()
 
@@ -566,8 +745,8 @@ def run_one(row, seed, data, kmeans, vegetation, legend, feature_mode: str, mode
         n_iterations=N_ITERATIONS,
         construct_solution_fn=construct_fn,
         construct_kwargs=construct_kwargs,
-        fitness_fn=fitness_weighted_sum,
-        fitness_kwargs=COMMON_FITNESS_KWARGS,
+        fitness_fn=fit_fn,
+        fitness_kwargs=fit_kwargs,
         pheromone_init_fn=initialize_node_cluster_pheromone,
         pheromone_init_kwargs=COMMON_PHEROMONE_INIT_KWARGS,
         pheromone_update_fn=update_fn,
@@ -583,13 +762,22 @@ def run_one(row, seed, data, kmeans, vegetation, legend, feature_mode: str, mode
     labels = opt.labels_
     centroids = opt.centroids_
 
-    recomputed_fitness, terms = fitness_weighted_sum(
+    recomputed_fitness, terms = fit_fn(
         X=X,
         labels=labels,
         centroids=centroids,
         weights=weights,
         neighbors=neighbors,
-        **COMMON_FITNESS_KWARGS,
+        **fit_kwargs,
+    )
+
+    all_fitness = compute_all_fitness_values(
+        X=X,
+        labels=labels,
+        centroids=centroids,
+        weights=weights,
+        neighbors=neighbors,
+        snn_graph=snn_graph,
     )
 
     ecological_overall, _ = evaluate_land_use(
@@ -601,6 +789,7 @@ def run_one(row, seed, data, kmeans, vegetation, legend, feature_mode: str, mode
     )
 
     out = {
+        "fitness_name": fitness_name,
         "algorithm": algorithm,
         "pheromone_update": update_name,
         "alpha": alpha,
@@ -614,6 +803,7 @@ def run_one(row, seed, data, kmeans, vegetation, legend, feature_mode: str, mode
         "stage1_best_fitness": float(row.get("best_fitness", row.get("best_best_fitness", np.nan))),
         "best_fitness": float(opt.best_fitness_),
         "recomputed_fitness": float(recomputed_fitness),
+        **all_fitness,
         "ari_vs_kmeans": float(adjusted_rand_score(kmeans.labels_, labels)),
         "runtime_sec": float(time.perf_counter() - t0),
         "final_pheromone_min": float(np.min(opt.pheromone_)),
@@ -635,6 +825,8 @@ def rebuild_validation_summary(runs_path: Path, summary_path: Path, sep: str = "
     runs = deduplicate_validation_runs(read_csv_auto(runs_path))
 
     group_cols = ["algorithm", "pheromone_update", "alpha", "beta", "evaporation", "q"]
+    if "fitness_name" in runs.columns:
+        group_cols.insert(0, "fitness_name")
     for optional_col in ["feature_mode", "mode"]:
         if optional_col in runs.columns:
             group_cols.append(optional_col)
@@ -642,7 +834,13 @@ def rebuild_validation_summary(runs_path: Path, summary_path: Path, sep: str = "
     metric_cols = [
         "best_fitness",
         "recomputed_fitness",
+        "centroid_fitness",
+        "silhouette_fitness",
+        "snn_fitness",
         "compactness",
+        "silhouette",
+        "silhouette_term",
+        "snn_cut",
         "spatial",
         "ari_vs_kmeans",
         "weighted_combined_ecological_consistency",
@@ -736,6 +934,8 @@ def rebuild_significance_stats(runs_path: Path, stats_path: Path, sep: str = ";"
     runs = deduplicate_validation_runs(read_csv_auto(runs_path))
 
     config_cols = ["algorithm", "pheromone_update", "alpha", "beta", "evaporation", "q"]
+    if "fitness_name" in runs.columns:
+        config_cols.insert(0, "fitness_name")
     for optional_col in ["feature_mode", "mode"]:
         if optional_col in runs.columns:
             config_cols.append(optional_col)
@@ -743,7 +943,13 @@ def rebuild_significance_stats(runs_path: Path, stats_path: Path, sep: str = ";"
     metric_cols = [
         "best_fitness",
         "recomputed_fitness",
+        "centroid_fitness",
+        "silhouette_fitness",
+        "snn_fitness",
         "compactness",
+        "silhouette",
+        "silhouette_term",
+        "snn_cut",
         "spatial",
         "ari_vs_kmeans",
         "weighted_combined_ecological_consistency",
@@ -809,8 +1015,23 @@ def parse_args():
     parser.add_argument("--stage1-summary", type=str, default=None)
     parser.add_argument("--top-n", type=int, default=20, help="Number of top configs to validate. Use -1 for all after threshold.")
     parser.add_argument("--top-n-per-algorithm", type=int, default=0, help="Also include the top N configs within each algorithm family.")
-    parser.add_argument("--fitness-threshold", type=float, default=0.36)
+    parser.add_argument(
+        "--fitness-threshold",
+        type=float,
+        default=None,
+        help=(
+            "Maximum Stage 1 fitness for candidate selection. Defaults to 0.36 "
+            "for a single fitness function and disables thresholding for "
+            "multi-fitness validation."
+        ),
+    )
     parser.add_argument("--seeds", type=str, default=DEFAULT_SEEDS)
+    parser.add_argument(
+        "--fitness-functions",
+        type=str,
+        default="all",
+        help="Comma-separated fitness functions to validate: all, centroid, silhouette, snn.",
+    )
 
     parser.add_argument("--data-path", type=str, default=str(DATA_PATH))
     parser.add_argument("--vegetation-path", type=str, default=str(VEGETATION_PATH))
@@ -836,18 +1057,38 @@ def parse_args():
 def main():
     args = parse_args()
 
-    stage1_summary_path = resolve_result_path(args.stage1_summary, args.feature_mode, SUMMARY_PATH)
-    output_runs_path = resolve_result_path(args.output_runs, args.feature_mode, OUTPUT_RUNS_PATH)
-    output_summary_path = resolve_result_path(args.output_summary, args.feature_mode, OUTPUT_SUMMARY_PATH)
-    output_stats_path = resolve_result_path(args.output_stats, args.feature_mode, OUTPUT_STATS_PATH)
-    log_path = resolve_result_path(args.log_path, args.feature_mode, LOG_PATH)
-
-    logger = setup_logging(log_path)
-
     seeds = parse_seeds(args.seeds)
+    fitness_names = parse_fitness_functions(args.fitness_functions)
+    if args.fitness_threshold is None:
+        fitness_threshold = 0.36 if len(fitness_names) == 1 else np.inf
+    else:
+        fitness_threshold = args.fitness_threshold
 
-    logger.info("Reading Stage 1 summary: %s", stage1_summary_path)
-    summary = read_csv_auto(stage1_summary_path)
+    output_runs_paths = {
+        name: resolve_fitness_result_path(args.output_runs, args.feature_mode, name, OUTPUT_RUNS_PATH)
+        for name in fitness_names
+    }
+    output_summary_paths = {
+        name: resolve_fitness_result_path(args.output_summary, args.feature_mode, name, OUTPUT_SUMMARY_PATH)
+        for name in fitness_names
+    }
+    output_stats_paths = {
+        name: resolve_fitness_result_path(args.output_stats, args.feature_mode, name, OUTPUT_STATS_PATH)
+        for name in fitness_names
+    }
+    failure_paths = {
+        name: output_runs_paths[name].with_name(output_runs_paths[name].stem + "_failures.csv")
+        for name in fitness_names
+    }
+    log_paths = [
+        resolve_fitness_result_path(args.log_path, args.feature_mode, name, LOG_PATH)
+        for name in fitness_names
+    ]
+
+    logger = setup_logging(log_paths)
+
+    logger.info("Reading Stage 1 summaries for fitness functions: %s", fitness_names)
+    summary = read_stage1_summaries(args.stage1_summary, args.feature_mode, fitness_names)
 
     fitness_col = stage1_fitness_column(summary)
     logger.info("Using Stage 1 fitness column for filtering/sorting: %s", fitness_col)
@@ -855,12 +1096,17 @@ def main():
     candidates = select_validation_candidates(
         summary=summary,
         fitness_col=fitness_col,
-        fitness_threshold=args.fitness_threshold,
+        fitness_threshold=fitness_threshold,
         top_n=args.top_n,
         top_n_per_algorithm=args.top_n_per_algorithm,
+        fitness_names=fitness_names,
     )
 
     logger.info("Candidate configs after threshold/top-n: %s", len(candidates))
+    logger.info("Fitness functions: %s", fitness_names)
+    logger.info("Fitness threshold: %s", fitness_threshold)
+    if "fitness_name" in candidates.columns:
+        logger.info("Candidate configs per fitness:\n%s", candidates["fitness_name"].value_counts().to_string())
     if args.top_n_per_algorithm > 0:
         logger.info("Included up to %s configs per algorithm family.", args.top_n_per_algorithm)
     logger.info("Seeds: %s", seeds)
@@ -871,7 +1117,9 @@ def main():
             expanded.append((row, seed))
 
     if not args.no_resume:
-        completed = load_completed_run_keys(output_runs_path)
+        completed = set()
+        for fitness_name, path in output_runs_paths.items():
+            completed.update(load_completed_run_keys(path))
         before = len(expanded)
         expanded = [
             (row, seed)
@@ -908,7 +1156,15 @@ def main():
     logger.info("KMeans fitness: %.6f", kmeans_fit)
     logger.info("KMeans terms: %s", kmeans_terms)
 
-    buffer = []
+    logger.info("Building SNN graph...")
+    snn_graph = build_snn_graph(
+        X=data["X_model"],
+        spatial_neighbors=data["neighbors"],
+        **SNN_GRAPH_KWARGS,
+    )
+    logger.info("SNN graph edges: %s", snn_graph.nnz // 2)
+
+    buffers = {name: [] for name in fitness_names}
 
     iterator = enumerate(expanded, start=1)
     if tqdm is not None:
@@ -916,7 +1172,8 @@ def main():
 
     for idx, (row, seed) in iterator:
         msg = (
-            f"[{idx}/{len(expanded)}] {row['algorithm']} | {row['pheromone_update']} | "
+            f"[{idx}/{len(expanded)}] {row.get('fitness_name', 'centroid')} | "
+            f"{row['algorithm']} | {row['pheromone_update']} | "
             f"alpha={row['alpha']} beta={row['beta']} evap={row['evaporation']} q={row['q']} seed={seed}"
         )
         if tqdm is not None:
@@ -930,15 +1187,17 @@ def main():
                 seed=seed,
                 data=data,
                 kmeans=kmeans,
+                snn_graph=snn_graph,
                 vegetation=vegetation,
                 legend=legend,
                 feature_mode=args.feature_mode,
                 mode=args.mode,
             )
-            buffer.append(result)
+            buffers[result["fitness_name"]].append(result)
 
             logger.info(
-                "SUCCESS algorithm=%s seed=%s fitness=%.6f ari=%.4f eco=%.4f",
+                "SUCCESS fitness=%s algorithm=%s seed=%s fitness=%.6f ari=%.4f eco=%.4f",
+                result["fitness_name"],
                 result["algorithm"],
                 seed,
                 result["best_fitness"],
@@ -949,6 +1208,7 @@ def main():
         except Exception as e:
             logger.exception("FAILED config=%s seed=%s error=%s", dict(row), seed, repr(e))
             fail_row = {
+                "fitness_name": row.get("fitness_name", "centroid"),
                 "algorithm": row.get("algorithm"),
                 "pheromone_update": row.get("pheromone_update"),
                 "alpha": row.get("alpha"),
@@ -961,37 +1221,63 @@ def main():
                 "error": repr(e),
             }
             append_csv(
-                output_runs_path.with_name(output_runs_path.stem + "_failures.csv"),
+                failure_paths[row.get("fitness_name", "centroid")],
                 [fail_row],
                 sep=args.sep_output,
             )
 
-        if len(buffer) >= args.save_every:
-            append_csv(output_runs_path, buffer, sep=args.sep_output)
-            logger.info("Flushed %s rows to %s", len(buffer), output_runs_path)
-            buffer = []
+        for fitness_name in fitness_names:
+            if len(buffers[fitness_name]) >= args.save_every:
+                append_csv(output_runs_paths[fitness_name], buffers[fitness_name], sep=args.sep_output)
+                logger.info(
+                    "Flushed %s %s rows to %s",
+                    len(buffers[fitness_name]),
+                    fitness_name,
+                    output_runs_paths[fitness_name],
+                )
+                buffers[fitness_name] = []
 
-    if buffer:
-        append_csv(output_runs_path, buffer, sep=args.sep_output)
-        logger.info("Final flush: %s rows to %s", len(buffer), output_runs_path)
+    for fitness_name in fitness_names:
+        if buffers[fitness_name]:
+            append_csv(output_runs_paths[fitness_name], buffers[fitness_name], sep=args.sep_output)
+            logger.info(
+                "Final flush: %s %s rows to %s",
+                len(buffers[fitness_name]),
+                fitness_name,
+                output_runs_paths[fitness_name],
+            )
 
     logger.info("Rebuilding validation summary...")
-    validation_summary = rebuild_validation_summary(
-        runs_path=output_runs_path,
-        summary_path=output_summary_path,
-        sep=args.sep_output,
-    )
+    validation_summaries = {
+        fitness_name: rebuild_validation_summary(
+            runs_path=output_runs_paths[fitness_name],
+            summary_path=output_summary_paths[fitness_name],
+            sep=args.sep_output,
+        )
+        for fitness_name in fitness_names
+        if output_runs_paths[fitness_name].exists()
+    }
 
-    logger.info("Top validation summary rows:")
-    logger.info("\n%s", validation_summary.head(20).to_string(index=False))
+    for fitness_name, validation_summary in validation_summaries.items():
+        logger.info("Top %s validation summary rows:", fitness_name)
+        logger.info("\n%s", validation_summary.head(20).to_string(index=False))
 
     logger.info("Rebuilding significance statistics...")
-    stats_summary = rebuild_significance_stats(
-        runs_path=output_runs_path,
-        stats_path=output_stats_path,
-        sep=args.sep_output,
-    )
-    logger.info("Wrote %s statistical comparison rows to %s", len(stats_summary), output_stats_path)
+    for fitness_name in fitness_names:
+        if not output_runs_paths[fitness_name].exists():
+            continue
+
+        stats_summary = rebuild_significance_stats(
+            runs_path=output_runs_paths[fitness_name],
+            stats_path=output_stats_paths[fitness_name],
+            sep=args.sep_output,
+        )
+        logger.info(
+            "Wrote %s %s statistical comparison rows to %s",
+            len(stats_summary),
+            fitness_name,
+            output_stats_paths[fitness_name],
+        )
     logger.info("Done.")
 
 
