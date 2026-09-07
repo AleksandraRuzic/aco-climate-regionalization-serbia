@@ -21,17 +21,17 @@
 
 \subsection{Motivation}
 
-Climate regionalization is the process of dividing a geographical area into regions with similar climatic characteristics. Such regions are useful in many scientific and practical applications, including agriculture, forestry, ecology, hydrology, biodiversity conservation and spatial planning. 
+Climate regionalization is the process of dividing a geographical area into regions with similar climatic characteristics. Such regions are useful in many scientific and practical applications, including agriculture, forestry, ecology, hydrology, biodiversity conservation and spatial planning \cite{fovell1993,swenson2019}.
 
-The most widely used climate regionalization is the Köppen-Geiger climate classification. It classifies climate using long-term temperature and precipitation statistics. It has been the standard climate classification system for more than one hundred years. Because of its simplicity and global applicability, it is still commonly used in climatology, ecology and many other environmental sciences.
+The most widely used climate regionalization is the Köppen-Geiger climate classification. It classifies climate using long-term temperature and precipitation statistics. It has been used for more than one hundred years. It is still common in climate studies and related fields \cite{koppen1936,peel2007,beck2018}.
 
-Although the Köppen-Geiger classification is extremely successful as a global climate classification system, it was not designed to optimize regionalization for a particular country or application. The classification is based on predefined climatic thresholds that are applied worldwide. Consequently, it cannot adapt to local climatic characteristics or optimize the resulting regions according to a desired objective.
+Although the Köppen-Geiger classification is very successful as a global climate classification system, it was not designed to optimize regionalization for one country or one application. The classification is based on predefined climatic thresholds. These thresholds are applied worldwide \cite{koppen1936,peel2007}. Therefore, the system cannot adapt to local climatic characteristics or optimize the regions according to a chosen objective.
 
-Recent advances in optimization algorithms and machine learning make it possible to approach climate regionalization from a different perspective. Climate regions can be obtained by solving an optimization problem. Such an approach allows different optimization objectives.
+Recent work in climate regionalization often uses data-driven methods. In these methods, regions are formed from the data instead of fixed rules. Clustering is a common baseline because it groups locations with similar climate values \cite{fovell1993,carvalho2016}. Self-organizing maps are also used to find coherent climate and precipitation regions \cite{sheridan2011,swenson2019}. However, ordinary clustering can create fragmented maps. For this reason, spatial coherence is also important. ACO is useful here because it can search for region assignments while combining more than one criterion \cite{dorigo1996,dorigo2004}.
 
 The goal of this work is not to replace the Köppen-Geiger classification as a universal climate classification system. Instead, the objective is to investigate whether a data-driven optimization approach can produce a regionalization that is better suited for Serbia while using comparable climatic information.
 
-In the proposed approach, each ant constructs one candidate climate regionalization. One ant assigns every spatial unit to one of a predefined number of climate regions. A complete ant solution is therefore a vector of cluster labels, with one label assigned to each spatial unit. The quality of each candidate regionalization is evaluated using an objective function that combines climatic compactness and spatial coherence. Climatic compactness measures whether locations assigned to the same region have similar temperature and precipitation characteristics. Spatial coherence encourages spatial units to take the same regional label as their neighbours which stops extremely fragmented regions. Ant Colony Optimization searches for the assignment that minimizes the weighted combination of these two criteria.
+In the proposed approach, each ant constructs one candidate climate regionalization. One ant assigns every spatial unit to one of a predefined number of climate regions. A complete ant solution is therefore a vector of cluster labels, with one label assigned to each spatial unit. The quality of each candidate regionalization is evaluated using one of several fitness functions. Each fitness function defines a different view of what a good regionalization means. Ant Colony Optimization then searches for the assignment that minimizes the selected fitness function.
 
 
 \subsection{Research objectives}
@@ -41,6 +41,7 @@ The current result is not a single optimized climate map, but an optimization fr
 \begin{itemize}
     \item preprocessing pipeline for transforming climatic raster data into a format suitable for optimization
     \item a couple of ACO construction strategies and heuristic functions
+    \item comparison of different fitness functions
     \item investigation of different pheromone update strategies and algorithm parameters
     \item comparison of the proposed approaches with the KMeans as a baseline
     \item comparison of the new classification with the Köppen-Geiger regionalization
@@ -53,17 +54,19 @@ The current result is not a single optimized climate map, but an optimization fr
 
 \subsection{Historical background}
 
-The Köppen-Geiger climate classification is one of the oldest and most widely used climate classification systems. It was originally developed by the German climatologist Wladimir Köppen at the end of the nineteenth century and was later refined together with Rudolf Geiger. During the following decades the classification became the standard reference for describing climate regions throughout the world.
+The Köppen-Geiger climate classification is one of the oldest and most widely used climate classification systems. It was originally developed by Wladimir Köppen. It was later refined together with Rudolf Geiger \cite{koppen1936,peel2007}. During the following decades the classification became a common reference for describing climate regions throughout the world \cite{peel2007,beck2018}.
 
-The original motivation behind the Köppen classification was to describe the relationship between climate and natural vegetation. Köppen observed that regions with similar temperature and precipitation conditions often support similar types of vegetation. He therefore designed the classification so that climate zones would approximately correspond to the major vegetation regions of the world.
+The original motivation behind the Köppen classification was to describe the relationship between climate and natural vegetation \cite{koppen1936,peel2007}. Köppen observed that regions with similar temperature and precipitation conditions often support similar types of vegetation. He therefore designed the classification so that climate zones would approximately correspond to the major vegetation regions of the world.
 
-Unlike many regional climate classifications developed for specific countries, the Köppen-Geiger system was designed as a global classification. The same classification rules are applied to every location regardless of continent or geographical characteristics. Because of its simplicity, reproducibility and long history of use, the Köppen-Geiger classification is still widely used in climatology, ecology, agriculture, forestry and many other environmental sciences.
+Unlike many regional climate classifications developed for specific countries, the Köppen-Geiger system was designed as a global classification. The same classification rules are applied to every location. Because of its simplicity, reproducibility and long history, it is still widely used in climatology, ecology, agriculture, forestry and other environmental sciences \cite{peel2007,beck2018}.
 
-The classification has also been updated several times using newer climatic observations while preserving the original classification principles. This has allowed the system to remain relevant despite changes in the global climate.
+The classification has also been updated several times using newer climatic observations. These updates preserve the original classification principles \cite{peel2007,beck2018}. This has allowed the system to remain relevant despite changes in the global climate.
+
+The Köppen-Geiger classification has also been applied directly to Serbia. Milovanović et al. \cite{milovanovic2017} used temperature and precipitation data to map Köppen climate types in Serbia. This makes it a useful local reference for this study.
 
 \subsection{Climate classes}
 
-The classification is hierarchical. The classes labels consist of three letters. The first level of the Köppen-Geiger classification divides the world's climates into five major climate groups.
+The classification is hierarchical. The class labels consist of three letters. The first level of the Köppen-Geiger classification divides the world's climates into five major climate groups \cite{koppen1936,peel2007}.
 
 \begin{table}[h]
 \centering
@@ -87,7 +90,7 @@ Although the complete Köppen-Geiger system contains many different climate clas
 
 \subsection{Advantages}
 
-The Köppen-Geiger classification has remained the most widely used climate classification system for more than one hundred years for several reasons.
+The Köppen-Geiger classification has remained widely used for more than one hundred years for several reasons \cite{peel2007,beck2018}.
 
 \begin{itemize}
     \item It is simple and easy to interpret.
@@ -98,11 +101,11 @@ The Köppen-Geiger classification has remained the most widely used climate clas
     \item It provides a common reference used across many scientific disciplines.
 \end{itemize}
 
-These characteristics make the Köppen-Geiger classification an appropriate reference when evaluating alternative climate regionalization methods.
+These characteristics make the Köppen-Geiger classification an appropriate reference when evaluating alternative climate regionalization methods \cite{peel2007,beck2018}.
 
 \subsection{Limitations}
 
-Despite its widespread use, the Köppen-Geiger classification also has several limitations when used for regional climate regionalization.
+Despite its widespread use, the Köppen-Geiger classification also has several limitations when used for regional climate regionalization \cite{fovell1993,swenson2019}.
 \begin{itemize}
   \item The classification is entirely rule-based. Every location is assigned to a climate class using predefined thresholds instead of optimizing the resulting regions according to a specific objective.
   \item The boundaries between climate classes are determined by fixed threshold values. Small differences in temperature or precipitation around these thresholds may result in different climate classes even though the climatic conditions are very similar.
@@ -111,6 +114,8 @@ Despite its widespread use, the Köppen-Geiger classification also has several l
 
 The objective of this research is therefore not to replace the Köppen-Geiger classification as a universal climate classification system. Instead, it is used as a well-established reference against which the proposed optimization-based regionalization can be compared.
 
+These limitations are one reason why data-driven regionalization methods are also used in climate studies. Cluster analysis has been used to define climate regions from temperature and precipitation data \cite{fovell1993}. KMeans has been used for climate-change regionalization in Europe \cite{carvalho2016}. Self-organizing maps are another common approach for finding coherent climate or precipitation regions \cite{sheridan2011,swenson2019}. This work follows the same general idea. It forms regions from data. However, it uses ACO instead of a standard clustering algorithm.
+
 
 
 \section{Data preparation: climate raster files and final dataframe}
@@ -118,6 +123,8 @@ The objective of this research is therefore not to replace the Köppen-Geiger cl
 
 \subsection{Short summary}
 The first step was to prepare the climate data in a form that can be used for clustering. The input data consisted of several .tif raster files, where each file represents one climate variable over Serbia. Since the rasters had to be used together, they were first put onto the same spatial grid. After that, the value from every raster was extracted for every grid cell and stored in one table. Rows with missing values were removed, so the final dataframe contains only locations where all climate variables are available. This final table is saved as df\_valid.csv and is used as the input for the later preprocessing and clustering pipeline.
+
+This removed 252,145 cells, or 45.55\% of the rectangular raster grid. Most of these cells were outside the study-area mask. This was checked against the GADM Serbia boundary \cite{gadm2022}. Only 3,001 removed cells were inside the GADM polygon. Some valid cells were outside the GADM polygon because the climate raster includes Kosovo, while the GADM Serbia boundary used here does not.
 
 Key input \& outputs:
 \begin{verbatim}
@@ -261,9 +268,15 @@ The resulting structure is then passed unchanged to all optimization algorithms 
 \label{sec:frameworsk}
 
 \subsection{Short summary}
-This part of the code defines the main optimization framework. The goal was to make one common engine that can run different ant-based clustering strategies under the same conditions. The engine does not decide how one ant builds a clustering solution. Instead, that part is passed in as a separate construction function. After each ant builds a solution, the solution is evaluated using the same fitness function and pheromone values are updated.
+This part of the code defines the main optimization framework. The goal was to make one common engine that can run different ant-based clustering strategies under the same conditions. The engine does not decide how one ant builds a clustering solution. Instead, that part is passed in as a separate construction function. After each ant builds a solution, the solution is evaluated using one of the tested fitness functions and pheromone values are updated.
 
-The current fitness combines two terms: feature compactness and spatial disagreement. Compactness measures how close points are to their assigned cluster centroids, while spatial disagreement measures how often neighboring nodes belong to different clusters. Lower fitness is better. The pheromone matrix stores a learned preference for assigning each node to each cluster.
+The method is related to earlier work on ant-based clustering and topographic mapping \cite{deneubourg1991,handl2006}. Those studies show how simple ant-like agents can be used to form groups from data. This work uses the same general idea, but applies it to climate regionalization. The focus is on comparing construction strategies for spatial climate regions, rather than on reproducing a standard ant-based clustering algorithm.
+
+ACO has also been used in spatial environmental optimization. Examples include protected-area zoning, ecological corridor detection, land-use optimization and urban heat mitigation \cite{liu2012,peng2019,zhang2021,tong2024}. These studies are not climate regionalization studies. However, they show that ACO can be useful for spatial problems with ecological or compactness objectives.
+
+The experiments use three fitness functions. Each fitness function defines a different view of what a good regionalization means. The centroid-based fitness favors compact groups in feature space. The silhouette-based fitness compares cohesion and separation. The graph-based fitness emphasizes local similarity on the spatial neighborhood graph. All three fitness functions are tested on the same parameter grid.
+
+The pheromone matrix stores a learned preference for assigning each node to each cluster.
 
 
 \subsection{Detailed explanation}
@@ -330,12 +343,18 @@ for each iteration:
 
 The implementation also allows pheromone updates after smaller batches of ants. If no batch size is given, pheromone is updated once after all ants in the iteration. If a batch size is given, pheromone is updated several times inside the same iteration. This was useful during experimentation because it made it possible to compare iteration-level, colony-level, batch-level, and ant-level learning behavior.
 
-\subsubsection{Fitness function}
-The current fitness function is a weighted sum of two terms:
-\texttt{fitness = w\_compactness · compactness + w\_spatial · spatial\_disagreement}
+\subsubsection{Fitness functions}
+The experiments use three fitness functions. They define three different optimization objectives. Lower values are better in all three cases.
+
+\textbf{Centroid-based fitness} \\
+The centroid-based fitness function is a weighted sum of two terms:
+\begin{verbatim}
+fitness =
+    w_compactness * compactness
+  + w_spatial * spatial_disagreement
+\end{verbatim}
 
 The first term is feature compactness. It measures how close nodes are to the centroid of their assigned cluster. This is normalized by the total variance of the data, so the value is easier to compare across different feature representations. All centroid and variance calculations are weighted using the superpixel node weights described in the preprocessing stage. This ensures that the optimization approximates the result that would be obtained if the algorithm operated directly on the original raster cells.
-
 The second term is spatial disagreement. It measures the fraction of neighboring node pairs that have different cluster labels. If many neighboring nodes belong to different clusters, the map is fragmented and spatial disagreement is high. If neighboring nodes often belong to the same cluster, spatial disagreement is low.
 
 The default weights used in the experiments were:
@@ -345,6 +364,33 @@ The default weights used in the experiments were:
 \end{verbatim}
 
 This means that the objective gives more importance to feature compactness, while still encouraging spatially smoother clusters. 
+
+\textbf{Silhouette-based fitness} \\
+The silhouette-based fitness uses the silhouette score instead of centroid compactness. For each node, it compares two distances. The first distance is the average distance to nodes in the same cluster. The second distance is the average distance to the nearest other cluster. A high silhouette score means that a node is closer to its own cluster than to other clusters.
+
+Since the optimizer minimizes fitness, the silhouette score is converted into a minimization term:
+\begin{verbatim}
+silhouette_term = (1 - mean_silhouette) / 2
+\end{verbatim}
+
+The final fitness is:
+\begin{verbatim}
+fitness =
+    w_silhouette * silhouette_term
+  + w_spatial * spatial_disagreement
+\end{verbatim}
+
+\textbf{SNN-based fitness} \\
+The SNN-based fitness uses a shared-nearest-neighbor graph. This graph connects nodes that have similar local neighborhoods in feature space. The fitness measures how much of this graph is cut by the clustering. If many strong SNN links connect nodes with different labels, the SNN cut is high.
+
+The final fitness is:
+\begin{verbatim}
+fitness =
+    w_snn * snn_cut
+  + w_spatial * spatial_disagreement
+\end{verbatim}
+
+This objective does not use cluster centroids in its main term. It therefore defines regionalization quality differently from the centroid-based fitness.
 
 
 \subsubsection{Compactness}
@@ -381,9 +427,9 @@ In this strategy, deposit is based on how much better each solution is than the 
 
 
 \subsubsection{Current implementation}
-This part of the implementation is relatively stable. The optimizer, fitness function, and pheromone update functions form the common experimental framework. They are not specific to one heuristic or one construction strategy.
+This part of the implementation is relatively stable. The optimizer, fitness functions, and pheromone update functions form the common experimental framework. They are not specific to one heuristic or one construction strategy.
 
-The main design choice that still affects interpretation is the fitness function. It currently uses centroid-based compactness. This is useful and easy to interpret, but it may favor KMeans-like solutions. Because of that, external validation metrics such as vegetation homogeneity are later used to check whether a solution is meaningful beyond centroid compactness.
+The choice of fitness function affects how the results should be interpreted. The centroid-based fitness rewards centroid compactness, so it may favor KMeans-like solutions. The other fitness functions define regionalization quality differently. This makes it possible to compare construction strategies under different optimization objectives.
 
 \section{Construction strategies and heuristics}
 \label{sec:strategies}
@@ -517,7 +563,7 @@ This approach allows every climate region to be evaluated using the land cover t
 
 
 \subsubsection{CORINE Land Cover dataset}
-The external validation is based on the CORINE Land Cover (CLC) 2018 dataset produced by the Copernicus Land Monitoring Service.
+The external validation is based on the CORINE Land Cover (CLC) 2018 dataset produced by the Copernicus Land Monitoring Service \cite{copernicusCLC2018,clcManual2021}.
 
 The raster version with a spatial resolution of 100 m was used in this work. Every raster cell belongs to one of the official CLC land cover classes. The dataset covers the entire territory of Serbia and was reprojected to match the coordinate reference system used by the climate dataset.
 
@@ -637,7 +683,7 @@ Higher values indicate that the climate regions are more environmentally consist
 
 
 \subsection{Similarity analysis}
-The ecological consistency score evaluates how well the climate regions correspond to independent land cover information. A different question is whether the proposed clustering algorithms produce solutions that are similar to classical centroid-based clustering methods. If the obtained clustering is very similar to the KMeans solution, the additional complexity introduced by the ACO framework may not provide significant practical benefits. For this purpose, the Adjusted Rand Index (ARI) is used.
+The ecological consistency score evaluates how well the climate regions correspond to independent land cover information. A different question is whether the proposed clustering algorithms produce solutions that are similar to classical centroid-based clustering methods. If the obtained clustering is very similar to the KMeans solution, the additional complexity introduced by the ACO framework may not provide significant practical benefits. For this purpose, the Adjusted Rand Index (ARI) is used \cite{hubert1985}.
 
 The ARI compares two different partitions of the same dataset. In this work, one partition is produced by the proposed ant colony algorithm and the other is produced by the KMeans algorithm.
 
@@ -659,7 +705,7 @@ In this work, the ARI is used only to describe how much the proposed algorithms 
 
 The Köppen-Geiger climate classification serves as a reference climate regionalization against which the obtained solutions are compared.
 
-A high-resolution Köppen-Geiger raster for the 1991--2020 climatological normal period was downloaded from the Global Hydro-Environmental Observatory (GloH2O) project. The raster has a spatial resolution of approximately 1 km and contains one Köppen climate class for every raster cell.
+A high-resolution Köppen-Geiger raster for the 1991--2020 climatological normal period was downloaded from the Global Hydro-Environmental Observatory (GloH2O) project \cite{beck2018}. The raster has a spatial resolution of approximately 1 km and contains one Köppen climate class for every raster cell.
 
 Since the clustering pipeline operates on the dataframe \texttt{df\_valid.csv}, the Köppen raster was sampled at every valid climate grid cell using its geographical coordinates. The resulting Köppen class was stored together with the spatial coordinates.
 
@@ -667,7 +713,9 @@ Later in the project, these Köppen labels are aggregated to the optimization no
 
 \section{Results and discussion}
 \label{sec:results}
-This chapter first compares the proposed methods with the reference regionalizations. It then analyzes the influence of different algorithm variants and parameter values. Finally, the best-performing solutions are compared visually.
+This section presents the experiment results and conclusion drawn from them. The experiments are organized in two stages. Stage 1 is a broad sweep. It tests many combinations of algorithms, parameters, fitness functions and feature representations. It is used to find general patterns and promising configurations. Stage 2 is a validation step. It reruns selected configurations with more seeds. It is used to check whether the strongest Stage 1 results are stable.
+
+First, proposed methods are compared with the reference regionalizations. It then presents the Stage 1 results across fitness functions and feature representations. Parameter-level results and multi-seed validation are discussed after that. Finally, the best-performing solutions are compared visually.
 
 All tested algorithms contain stochastic components, including random node ordering and probabilistic node assignment. To reduce the influence of randomness, every parameter configuration was executed 2 times using different random seeds. The reported results are based on the mean values.
 
@@ -677,9 +725,11 @@ Before analyzing the proposed algorithms, it is useful to look at two reference 
 
 The first reference is KMeans clustering. KMeans is probably the most common clustering algorithm and groups locations based only on the similarity of their climate variables. It does not use any spatial information or ecological information.
 
-The second reference is the Köppen-Geiger climate classification. Unlike KMeans, Köppen is not a clustering algorithm. It is a rule-based climate classification that assigns every location to a climate class using predefined temperature and precipitation thresholds. Since it is the most widely used climate classification in the world, it provides a natural reference for comparison.
+The second reference is the Köppen-Geiger climate classification. Unlike KMeans, Köppen is not a clustering algorithm. It is a rule-based climate classification that assigns every location to a climate class using predefined temperature and precipitation thresholds \cite{koppen1936,peel2007}. Since it is widely used, it provides a natural reference for comparison \cite{peel2007,beck2018}.
 
 To compare all methods fairly, both KMeans and Köppen were evaluated using exactly the same metrics as the proposed algorithms. For Köppen, the original raster was first converted to the optimization nodes using majority voting. The resulting labels were then evaluated in the same way as every clustering solution. Table~\ref{tab:reference_results} shows the obtained results.
+
+% TODO: Update the reference regionalization table to include the alternative fitness functions, or state clearly which fitness function is used here.
 
 \begin{table}[ht]
 \centering
@@ -697,117 +747,267 @@ Köppen-Geiger & 0.3679 & 0.4426 \\
 
 KMeans achieves a much lower fitness value than Köppen. This is expected because KMeans is directly optimizing the climate data, while Köppen follows a fixed set of rules that were not designed for this optimization objective.
 
-The ecological consistency values are closer. KMeans still performs better, but Köppen also achieves a reasonably good score. This is not surprising because the original goal of the Köppen classification was to create climate regions that roughly match the distribution of natural vegetation.
+The ecological consistency values are closer. KMeans still performs better, but Köppen also achieves a reasonably good score. This is not surprising because the original goal of the Köppen classification was to create climate regions that roughly match the distribution of natural vegetation \cite{koppen1936,peel2007}.
 
 These two methods will be used as reference points when analyzing the proposed ant colony optimization algorithms in the following sections.
 
 
-\subsection{Overall experimental results}
-A total of 252 parameter configurations were evaluated. The experiments included different construction strategies, heuristic functions, pheromone update methods and parameter values. Every configuration was evaluated several times and the average results were recorded. Each configuration was evaluated using two main measures:
+\subsection{Extended Stage 1 results across fitness functions}
 
-\begin{itemize}
-    \item fitness, which was used as the optimization objective;
-    \item weighted ecological consistency, which was used as an external validation measure.
-\end{itemize}
-
-Table~\ref{tab:overall_stats} summarizes the overall statistics for both measures. Figures~\ref{fig:fitness_hist} and~\ref{fig:eco_hist} show the distribution of the two evaluation measures over all tested configurations.
+The extended Stage 1 sweep was repeated for three fitness functions and three feature representations. Each fitness function was tested on the same parameter grid. Fitness values are reported separately for each objective. They should not be compared as if they had the same meaning.
 
 \begin{table}[ht]
 \centering
-\caption{Overall statistics of the evaluated configurations.}
-\label{tab:overall_stats}
-\begin{tabular}{lcc}
+\caption{Stage 1 summary for the centroid-based fitness function.}
+\label{tab:stage1_centroid_fitness_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
 \hline
-\textbf{Statistic} & \textbf{Fitness} & \textbf{Weighted ecological consistency} \\
+\textbf{Feature set} & \textbf{Min fitness} & \textbf{Mean fitness} & \textbf{Fitness std.} & \textbf{Best ecology} & \textbf{Mean ecology} & \textbf{Ecology std.} \\
 \hline
-Minimum & 0.2325 & 0.3946 \\
-Mean & 0.4613 & 0.4448 \\
-Median & 0.3514 & 0.4527 \\
-Maximum & 0.9307 & 0.4846 \\
-Standard deviation & 0.2391 & 0.0264 \\
+Köppen-inspired & 0.2325 & 0.4613 & 0.2391 & 0.4846 & 0.4448 & 0.0264 \\
+Raw climate variables & 0.2332 & 0.4843 & 0.2404 & 0.4831 & 0.4413 & 0.0258 \\
+PCA features & 0.3037 & 0.6306 & 0.2206 & 0.4671 & 0.4294 & 0.0237 \\
+Overall & 0.2325 & 0.5254 & 0.2450 & 0.4846 & 0.4385 & 0.0261 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Stage 1 summary for the silhouette-based fitness function.}
+\label{tab:stage1_silhouette_fitness_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Feature set} & \textbf{Min fitness} & \textbf{Mean fitness} & \textbf{Fitness std.} & \textbf{Best ecology} & \textbf{Mean ecology} & \textbf{Ecology std.} \\
+\hline
+Köppen-inspired & 0.2672 & 0.4141 & 0.1100 & 0.4831 & 0.4387 & 0.0254 \\
+Raw climate variables & 0.2614 & 0.4173 & 0.1151 & 0.4800 & 0.4368 & 0.0250 \\
+PCA features & 0.2629 & 0.4450 & 0.1230 & 0.4682 & 0.4261 & 0.0231 \\
+Overall & 0.2614 & 0.4255 & 0.1169 & 0.4831 & 0.4339 & 0.0251 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Stage 1 summary for the SNN-based fitness function.}
+\label{tab:stage1_snn_fitness_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Feature set} & \textbf{Min fitness} & \textbf{Mean fitness} & \textbf{Fitness std.} & \textbf{Best ecology} & \textbf{Mean ecology} & \textbf{Ecology std.} \\
+\hline
+Köppen-inspired & 0.0830 & 0.3490 & 0.2223 & 0.4840 & 0.4406 & 0.0246 \\
+Raw climate variables & 0.0960 & 0.3678 & 0.2231 & 0.4821 & 0.4376 & 0.0242 \\
+PCA features & 0.0723 & 0.4266 & 0.2482 & 0.4707 & 0.4266 & 0.0228 \\
+Overall & 0.0723 & 0.3812 & 0.2336 & 0.4840 & 0.4350 & 0.0246 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+The ecological consistency values vary over a narrow range. For this reason, differences in ecological consistency should be interpreted carefully. They are useful for comparing solutions, but they should not be treated as large absolute differences.
+
+The same parameter configurations were matched across the three fitness objectives. This produced 756 matched configurations. Table~\ref{tab:stage1_fitness_objective_correlation} shows whether the same configurations tend to perform similarly under different objectives.
+
+\begin{table}[ht]
+\centering
+\caption{Correlation between matched fitness-objective values.}
+\label{tab:stage1_fitness_objective_correlation}
+\begin{tabular}{lccc}
+\hline
+\multicolumn{4}{c}{\textbf{Pearson correlation}} \\
+\hline
+\textbf{Objective} & \textbf{Centroid} & \textbf{Silhouette} & \textbf{SNN} \\
+\hline
+Centroid & 1.000 & 0.951 & 0.953 \\
+Silhouette & 0.951 & 1.000 & 0.980 \\
+SNN & 0.953 & 0.980 & 1.000 \\
+\hline
+\multicolumn{4}{c}{\textbf{Spearman correlation}} \\
+\hline
+\textbf{Objective} & \textbf{Centroid} & \textbf{Silhouette} & \textbf{SNN} \\
+\hline
+Centroid & 1.000 & 0.906 & 0.901 \\
+Silhouette & 0.906 & 1.000 & 0.967 \\
+SNN & 0.901 & 0.967 & 1.000 \\
 \hline
 \end{tabular}
 \end{table}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=0.8\textwidth]{fitness_hist.png}
-    \caption{Distribution of fitness values over all evaluated configurations.}
-    \label{fig:fitness_hist}
+The active fitness value was also compared with ecological consistency inside each objective group. Lower fitness is better, while higher ecological consistency is better. Negative correlations therefore indicate agreement between the optimization objective and the ecological validation metric.
 
+\begin{table}[ht]
+\centering
+\caption{Pearson correlation between active fitness and ecological consistency.}
+\label{tab:stage1_fitness_ecology_pearson}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Fitness function} & \textbf{Köppen-inspired} & \textbf{Raw} & \textbf{PCA} & \textbf{Overall} \\
+\hline
+Centroid & -0.962 & -0.974 & -0.972 & -0.970 \\
+Silhouette & -0.828 & -0.916 & -0.928 & -0.886 \\
+SNN & -0.846 & -0.903 & -0.870 & -0.870 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Spearman correlation between active fitness and ecological consistency.}
+\label{tab:stage1_fitness_ecology_spearman}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Fitness function} & \textbf{Köppen-inspired} & \textbf{Raw} & \textbf{PCA} & \textbf{Overall} \\
+\hline
+Centroid & -0.905 & -0.944 & -0.966 & -0.949 \\
+Silhouette & -0.677 & -0.838 & -0.926 & -0.819 \\
+SNN & -0.663 & -0.782 & -0.865 & -0.781 \\
+\hline
+\end{tabular}
+\end{table}
+
+The previous tables show correlations over the full configuration set. However, later analysis usually focuses on a smaller set of best configurations. For this reason, the same correlation was computed repeatedly over the best $N$ configurations.
+
+\begin{figure}[ht]
     \centering
-    \includegraphics[width=0.8\textwidth]{eco_hist.png}
-    \caption{Distribution of weighted ecological consistency over all evaluated configurations.}
-    \label{fig:eco_hist}
+    \includegraphics[width=\textwidth]{../experiments/results/stage1_topn_analysis/topn_corr_fitness_ecology_combined.png}
+    \caption{Top-N correlation between active fitness and ecological consistency. Each panel ranks configurations by one active fitness function. Lower fitness is better and higher ecological consistency is better. Negative values indicate agreement.}
+    \label{fig:topn_fitness_ecology_correlation}
 \end{figure}
 
-The fitness values cover a wide range, from 0.2325 to 0.9307. This shows that the choice of algorithm and parameter values has a large influence on the optimization result. The histogram is also bimodal. There are essentially two groups:
+If the relation were stable across the ranked list, the Top-N correlation would be expected to stabilize around the full-set value after the smallest sample sizes. Figure~\ref{fig:topn_fitness_ecology_correlation} shows a different pattern. For all three fitness functions, the correlation approaches the full-set value only after a large part of the configuration set is included. For centroid fitness, this happens after about 500 of 756 configurations. For silhouette and SNN fitness, the same pattern is even clearer. This pattern is clearest for the SNN-based fitness. For small values of $N$, the SNN correlation is weak or positive. This means that the best SNN-fitness configurations are not necessarily the best ecological configurations.
+
+The same check with the reverse ranking gives the opposite view. The correlation approaches the full-set value faster when configurations are added from the worst end. It needs only around 100-200 configurations for all three fitness functions. This is consistent with the idea that the global correlation is driven mostly by the separation between weak and acceptable configurations.
+
+The same pattern was also checked through standard deviation. All three fitness functions follow the same general pattern. Figure~\ref{fig:topn_snn_variation_comparison} shows the SNN case, where the effect is strongest. The active-fitness curve is not interpreted as a separate result. Its shape is expected because the configurations are sorted by that same metric. It is included only as a reference curve. The goal is to see whether ecological consistency follows the same pattern. This check does not compare raw metric scales. Both metrics were min-max normalized.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{../experiments/results/stage1_topn_analysis/topn_std_snn_ranking_comparison.png}
+    \caption{Top-N standard deviation for SNN-ranked configurations. The left panel adds configurations from best to worst SNN fitness. The right panel adds configurations from worst to best SNN fitness. Values are computed after min-max normalization within the SNN experiment set.}
+    \label{fig:topn_snn_variation_comparison}
+\end{figure}
+
+In the best-ranked subset, ecological variation is much larger than active-fitness variation, relative to its overall range. This means that configurations with very similar SNN fitness can still differ noticeably in ecological consistency. In the reverse ranking, the two curves move more similarly. This suggests that SNN fitness identifies weak configurations more consistently than it orders the strongest configurations by ecological quality.
+
+\begin{table}[ht]
+\centering
+\caption{Top five configurations by centroid-based fitness.}
+\label{tab:stage1_top5_centroid_fitness}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllcccccc}
+\hline
+\textbf{Feature set} & \textbf{Algorithm} & \textbf{Update} & \textbf{$\alpha$} & \textbf{$\beta$} & \textbf{Evap.} & \textbf{$q$} & \textbf{Fitness} & \textbf{Ecology} \\
+\hline
+Köppen-inspired & ACO Centroid & Best ant & 1.00 & 3.00 & 0.10 & 0.05 & 0.2325 & 0.4754 \\
+Raw & ACO Centroid & Best ant & 1.00 & 3.00 & 0.10 & 0.05 & 0.2332 & 0.4704 \\
+Raw & ACO Centroid & Best ant & 0.75 & 3.00 & 0.10 & 0.05 & 0.2332 & 0.4620 \\
+Köppen-inspired & ACO Centroid & Best ant & 1.00 & 3.00 & 0.02 & 0.05 & 0.2333 & 0.4709 \\
+Köppen-inspired & ACO Centroid & Best ant & 0.75 & 3.00 & 0.02 & 0.05 & 0.2341 & 0.4706 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Top five configurations by silhouette-based fitness.}
+\label{tab:stage1_top5_silhouette_fitness}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllcccccc}
+\hline
+\textbf{Feature set} & \textbf{Algorithm} & \textbf{Update} & \textbf{$\alpha$} & \textbf{$\beta$} & \textbf{Evap.} & \textbf{$q$} & \textbf{Fitness} & \textbf{Ecology} \\
+\hline
+Raw & ACO Centroid & Quality weighted & 2.00 & 3.00 & 0.02 & 0.05 & 0.2614 & 0.4564 \\
+PCA & ACO Centroid & Quality weighted & 2.00 & 3.00 & 0.10 & 0.05 & 0.2629 & 0.4542 \\
+PCA & ACO Centroid & Quality weighted & 2.00 & 3.00 & 0.02 & 0.05 & 0.2652 & 0.4506 \\
+PCA & ACO Centroid & All ants & 0.75 & 3.00 & 0.02 & 0.05 & 0.2657 & 0.4554 \\
+PCA & ACO Centroid & Best ant & 1.00 & 3.00 & 0.02 & 0.05 & 0.2665 & 0.4577 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Top five configurations by SNN-based fitness.}
+\label{tab:stage1_top5_snn_fitness}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllcccccc}
+\hline
+\textbf{Feature set} & \textbf{Algorithm} & \textbf{Update} & \textbf{$\alpha$} & \textbf{$\beta$} & \textbf{Evap.} & \textbf{$q$} & \textbf{Fitness} & \textbf{Ecology} \\
+\hline
+PCA & Multi-colony Cohesion Graph Spatial & All ants & 1.00 & 3.00 & 0.02 & 0.05 & 0.0723 & 0.4277 \\
+Köppen-inspired & Multi-colony Centroid Graph Spatial & All ants & 2.00 & 3.00 & 0.10 & 0.05 & 0.0830 & 0.4218 \\
+Köppen-inspired & Multi-colony Centroid Graph Spatial & All ants & 2.00 & 3.00 & 0.02 & 0.05 & 0.0845 & 0.4235 \\
+PCA & ACO Graph Local & All ants & 1.00 & 3.00 & 0.02 & 0.05 & 0.0869 & 0.4105 \\
+PCA & Multi-colony Centroid Graph Spatial & All ants & 2.00 & 3.00 & 0.10 & 0.05 & 0.0924 & 0.4231 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Top five configurations by ecological consistency.}
+\label{tab:stage1_top5_ecology}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llllcccccc}
+\hline
+\textbf{Fitness} & \textbf{Feature set} & \textbf{Algorithm} & \textbf{Update} & \textbf{$\alpha$} & \textbf{$\beta$} & \textbf{Evap.} & \textbf{$q$} & \textbf{Active fitness} & \textbf{Ecology} \\
+\hline
+Centroid & Köppen-inspired & ACO Centroid + Refinement & All ants & 0.75 & 1.00 & 0.10 & 0.05 & 0.2633 & 0.4846 \\
+SNN & Köppen-inspired & ACO Centroid + Refinement & All ants & 0.75 & 1.00 & 0.02 & 0.05 & 0.2082 & 0.4840 \\
+Centroid & Köppen-inspired & ACO Centroid + Refinement & All ants & 0.75 & 1.00 & 0.02 & 0.05 & 0.2729 & 0.4835 \\
+Centroid & Köppen-inspired & ACO Centroid & All ants & 1.00 & 3.00 & 0.10 & 0.05 & 0.2455 & 0.4835 \\
+Centroid & Raw & ACO Centroid & All ants & 1.00 & 1.00 & 0.10 & 0.05 & 0.2611 & 0.4831 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Top-50 overlap between active-fitness ranking and ecological ranking within each fitness-function group.}
+\label{tab:stage1_top50_overlap_within_fitness}
+\begin{tabular}{lc}
+\hline
+\textbf{Fitness ranking} & \textbf{Overlap with Top-50 ecology} \\
+\hline
+Centroid & 18 / 50 \\
+Silhouette & 0 / 50 \\
+SNN & 1 / 50 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Effect of non-centroid fitness functions}
+
+One concern was that centroid-based fitness could favor centroid-based construction strategies. To check this, experiments were repeated with two additional fitness functions. The silhouette-based fitness compares cohesion and separation. The SNN-based fitness uses graph structure and does not use cluster centroids as its main term.
+
+The results show that centroid-based construction remains strong even when the active objective is changed. ACO Centroid dominates the top configurations for centroid and silhouette fitness. For SNN fitness, the best configurations are more mixed. They include graph-local and multi-colony strategies. However, centroid-based strategies are still present among the strongest SNN configurations.
+
+This means that the dominance of centroid-based construction cannot be explained only by the original centroid-based fitness. At the same time, the SNN results show that changing the objective can change which construction strategies become competitive. Therefore, conclusions about strategy quality should be interpreted together with the chosen fitness function.
+
+\subsection{Initial conclusions}
+
 \begin{itemize}
-  \item a good group (roughly 0.23–0.50),
-  \item a poor group (roughly 0.65–0.93).
+  \item Köppen-inspired and raw feature representations lead to similar results. Their best fitness values and ecological consistency values are close across the tested objectives. PCA behaves differently. For the centroid-based fitness function, PCA is clearly worse than the other two representations. For silhouette and SNN fitness, PCA can still obtain good internal fitness values. However, its ecological consistency remains lower. This suggests that PCA may remove information that is useful for ecological validation.
+  \item The three fitness objectives are strongly correlated across matched configurations. This means that configurations which perform well under one objective often also perform well under the others. The strongest relation is between silhouette-based and SNN-based fitness.
+  \item Active fitness and ecological consistency are related, but this relation is not uniform across the ranked configuration set. Because lower fitness is better and higher ecological consistency is better, agreement appears as a negative correlation. The full-set correlation is strongest for centroid fitness. It is weaker for silhouette and SNN. The Top-N correlation and variation analyses show that this relation becomes strong only after many configurations are included. Among the best-ranked configurations, active fitness is a weaker proxy for ecological consistency. This is clearest for the SNN objective.
+  \item The additional silhouette and SNN objectives reduce the concern that centroid-based construction wins only because the fitness is centroid-based. ACO Centroid remains strong under more than one objective. However, SNN gives a more mixed top group. This shows that the chosen fitness function still affects which construction strategies look best.
+  \item The best ecological configurations mostly use centroid-based algorithms, especially ACO Centroid + Refinement. At the same time, all three fitness functions appear among the top ecological configurations. Their representation in the best ecological group is relatively balanced. This suggests that ecological consistency is not tied only to the centroid-based fitness function.
 \end{itemize}
-
-That strongly suggests that some algorithm families consistently perform much worse than others.
-
-The ecological consistency values vary much less. Most configurations are concentrated between approximately 0.44 and 0.48, while only a small number of experiments produce noticeably lower values. This suggests that although optimization has a strong effect on the fitness value, differences in ecological consistency are generally smaller.
-
-\newpage
-\subsection{Comparison of algorithm variants}
-
-This section compares the different algorithm variants tested in this work. Each variant was evaluated using all parameter combinations.Average fitness and weighted ecological consistency were calculated. Table~\ref{tab:algorithm_comparison} summarizes the average results for every algorithm.
-
-\begin{table}[ht]
-\centering
-\caption{Average results for the tested algorithm variants.}
-\label{tab:algorithm_comparison}
-\begin{tabular}{lcc}
-\hline
-\textbf{Algorithm} & \textbf{Fitness} & \textbf{Weighted ecological consistency} \\
-\hline
-ACO Centroid & 0.2701 & 0.4700 \\
-ACO Centroid + Refinement & 0.3141 & 0.4683 \\
-Multi-colony Centroid Graph Spatial & 0.3577 & 0.4535 \\
-ACO Graph Local & 0.5201 & 0.4344 \\
-Multi-colony Cohesion Graph Spatial & 0.5643 & 0.4314 \\
-ACO Cohesion + Refinement & 0.5985 & 0.4294 \\
-ACO Cohesion & 0.6046 & 0.4265 \\
-\hline
-\end{tabular}
-\end{table}
-
-The centroid-based methods consistently achieve the best results. Adding the refinement step slightly increases the fitness value, but the ecological consistency remains very similar. The multi-colony centroid graph spatial algorithm ranks third. Although it performs worse than the two centroid-based methods, it still clearly outperforms all graph and cohesion based approaches.
-
-The graph and cohesion variants achieve considerably higher fitness values and lower ecological consistency. Among them, the two cohesion-based methods produce the weakest results.
-
-Overall, the results indicate that the centroid heuristic is much more suitable for this problem than the graph or cohesion heuristics. For the remaining analysis, the centroid-based algorithms therefore receive the most attention.
-
-\subsubsection{Learning behavior}
-
-The final average values do not fully describe how the algorithms reach their solutions. The simplest ACO Centroid strategy does not show a long learning curve in the usual sense. In most runs it starts almost immediately near a good fitness value, around 0.28, and reaches a plateau after only a small number of iterations. This suggests that the centroid heuristic itself already gives very strong assignment information, so pheromone learning has relatively little room to improve the solution.
-
-Other competitive strategies show a more standard optimization trajectory. ACO Centroid + Refinement is the clearest example: it can start with much worse solutions, with fitness values close to 0.9, and then drop toward values around 0.2 during the run. In this case the optimization process and refinement step visibly improve the solution over time. This distinction is important for interpretation. The centroid strategy achieves strong final performance, but much of that performance comes from the construction heuristic being strong from the beginning, while the refinement-based strategies show a more explicit learning and improvement process.
-
-The influence of the pheromone update strategy was also investigated. Three update methods were tested: updating all ants, updating only the best ant and quality-weighted updates. Table~\ref{tab:pheromone_comparison} summarizes the average results.
-
-\begin{table}[ht]
-\centering
-\caption{Average results for different pheromone update strategies.}
-\label{tab:pheromone_comparison}
-\begin{tabular}{lcc}
-\hline
-\textbf{Update strategy} & \textbf{Fitness} & \textbf{Weighted ecological consistency} \\
-\hline
-All ants & 0.4424 & 0.4470 \\
-Best ant & 0.4767 & 0.4434 \\
-Quality weighted & 0.4649 & 0.4439 \\
-\hline
-\end{tabular}
-\end{table}
-
-The differences between the pheromone update strategies are much smaller than the differences between the algorithm variants. Updating all ants gives the lowest average fitness and the highest ecological consistency. The best-ant and quality-weighted updates produce very similar results.
 
 
 \subsection{Influence of parameters}
+
+% TODO: Update this subsection after Stage 2 is complete. Parameter-level claims should use the multi-seed validation results and statistical tests.
 
 Influence of each parameter will be investigated over all configs. In addition to that, the 25 best solutions according to the weighted ecological consistency are analyzed. This helps identify which parameter values are most common among the strongest solutions. 
 
@@ -890,97 +1090,9 @@ Evaporation & Mean fitness & Mean ecological consistency & Top 25 share \\
 \end{tabular}
 \end{table}
 
-\subsection{Comparison of the best-performing configurations}
-
-The 25 highest-ranked configurations according to fitness and the 25 highest-ranked configurations according to weighted ecological consistency were analyzed separately. Table~\ref{tab:top25_summary} summarizes the basic statistics of both groups. The difference between the two groups is relatively small, showing that both metrics identify high-quality solutions.
-
-\begin{table}[ht]
-\centering
-\caption{Comparison of the best-performing configurations.}
-\label{tab:top25_summary}
-\begin{tabular}{lccc}
-\hline
-\textbf{Subset} & \textbf{Mean fitness} & \textbf{Mean ecological consistency} & \textbf{Mean ARI} \\
-\hline
-Top 25 by ecology & 0.2578 & 0.4775 & 0.6591 \\
-Top 25 by fitness & 0.2390 & 0.4709 & 0.6258 \\
-Overlap & 0.2404 & 0.4771 & 0.6887 \\
-\hline
-\end{tabular}
-\end{table}
-
-The overlap between the two groups contains only seven configurations. However, the composition of the two groups is also very similar. As shown in Table~\ref{tab:algorithm_top25}, almost all selected configurations belong to the two centroid-based algorithms. The only exception is one ACO Cohesion + Refinement configuration, which appears among the best solutions according to fitness.
-
-\begin{table}[ht]
-\centering
-\caption{Algorithm composition of the best-performing configurations.}
-\label{tab:algorithm_top25}
-\begin{tabular}{lcc}
-\hline
-\textbf{Algorithm} & \textbf{Top 25 by fitness} & \textbf{Top 25 by ecology} \\
-\hline
-ACO Centroid & 14 & 12 \\
-ACO Centroid + Refinement & 10 & 13 \\
-ACO Cohesion + Refinement & 1 & 0 \\
-\hline
-\end{tabular}
-\end{table}
-
-These results confirm the conclusions from the previous sections. The centroid-based construction strategy consistently produces the strongest solutions, regardless of the evaluation metric. 
-
-\subsection{Sensitivity to feature representation}
-
-The initial sweep was performed using the Köppen-inspired feature representation. To test whether the conclusions depend on this particular feature set, the same Stage 1 protocol was repeated using raw climate variables and PCA features. Each feature representation was evaluated using 252 parameter configurations. Table~\ref{tab:feature_representation_stats} summarizes the overall Stage 1 results.
-
-\begin{table}[ht]
-\centering
-\caption{Stage 1 results for different feature representations. Fitness is minimized, while ecological consistency is maximized.}
-\label{tab:feature_representation_stats}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lccccc}
-\hline
-\textbf{Feature set} & \textbf{Best fitness} & \textbf{Mean fitness} & \textbf{Best ecology} & \textbf{Mean ecology} & \textbf{Ecology std.} \\
-\hline
-Köppen-inspired & 0.2325 & 0.4613 & 0.4846 & 0.4448 & 0.0264 \\
-Raw climate variables & 0.2332 & 0.4843 & 0.4831 & 0.4413 & 0.0258 \\
-PCA features & 0.3037 & 0.6306 & 0.4671 & 0.4294 & 0.0237 \\
-\hline
-\end{tabular}
-}
-\end{table}
-
-The raw climate representation produces results very similar to the Köppen-inspired representation. The best fitness values are almost identical, and the best ecological consistency values are also close. PCA performs worse in absolute terms: both the best fitness and the best ecological consistency are worse than for the other two representations. This suggests that the PCA representation used here removes some information that is useful for the current objective or for ecological consistency.
-
-More importantly, the ranking of construction strategies remains stable across feature sets. Table~\ref{tab:feature_algorithm_comparison} shows the average fitness and ecological consistency of the three strongest algorithm families for each representation.
-
-\begin{table}[ht]
-\centering
-\caption{Best algorithm families across feature representations.}
-\label{tab:feature_algorithm_comparison}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{llcc}
-\hline
-\textbf{Feature set} & \textbf{Algorithm} & \textbf{Mean fitness} & \textbf{Mean ecology} \\
-\hline
-Köppen-inspired & ACO Centroid & 0.2701 & 0.4700 \\
-Köppen-inspired & ACO Centroid + Refinement & 0.3141 & 0.4683 \\
-Köppen-inspired & Multi-colony Centroid Graph Spatial & 0.3577 & 0.4535 \\
-\hline
-Raw climate variables & ACO Centroid & 0.2831 & 0.4671 \\
-Raw climate variables & ACO Centroid + Refinement & 0.3354 & 0.4618 \\
-Raw climate variables & Multi-colony Centroid Graph Spatial & 0.3672 & 0.4528 \\
-\hline
-PCA features & ACO Centroid & 0.4004 & 0.4556 \\
-PCA features & ACO Centroid + Refinement & 0.5243 & 0.4426 \\
-PCA features & Multi-colony Centroid Graph Spatial & 0.5279 & 0.4403 \\
-\hline
-\end{tabular}
-}
-\end{table}
-
-In all three cases, centroid-based construction remains the strongest strategy. This supports the conclusion that the observed superiority of centroid-based construction is not an artifact of using only the Köppen-inspired feature set. However, this conclusion still applies under the current fitness function, whose compactness component is itself centroid-based.
-
 \subsection{Multi-seed validation and statistical testing}
+
+% TODO: Update this subsection after the new Stage 2 experiments are complete. It should cover all selected fitness functions and feature representations.
 
 Because the Stage 1 sweep used only two seeds per configuration, the best configurations were validated using five seeds. The validation step was used to check whether the ranking of top configurations is stable enough to support claims about parameter effects. For all feature representations, validation candidates were selected using the same rule: configurations first had to pass the Stage 1 fitness threshold, after which the best overall configurations and additional top configurations per algorithm family were selected from that filtered set.
 
@@ -1060,9 +1172,9 @@ Overall, the visual comparison shows that the proposed optimization framework pr
 
 This project currently provides a framework for climate regionalization using Ant Colony Optimization. Several directions for future work could follow.
 
-An important direction is the development of alternative fitness functions. The current fitness function is largely based on centroid compactness and spatial coherence. Since the centroid-based algorithms consistently achieved the best results under this objective, the next experiments should test fitness functions that are not directly aligned with centroid construction, such as silhouette-like cohesion/separation measures or graph-modularity-based criteria.
+One future direction is to test the sensitivity to the number of clusters. In this work, the number of clusters is fixed to five, based on the number of dominant Köppen-Geiger classes after aggregation. Future experiments could compare results for other values, such as $K=4$, $K=6$ and $K=7$. This would show whether the fitness value and ecological consistency depend strongly on the chosen number of regions.
 
-The ecological consistency measure developed in this work could also be incorporated directly into the optimization process. Instead of using it only for evaluation, future work could formulate climate regionalization as a multi-objective optimization problem that simultaneously optimizes both the fitness function and ecological consistency.
+The ecological consistency measure developed in this work could also be incorporated directly into the optimization process. Instead of using it only for evaluation, future work could formulate climate regionalization as a multi-objective optimization problem. In that case, fitness and ecological consistency would be treated as separate objectives. This could produce a Pareto front of possible regionalizations instead of selecting only one best solution.
 
 Another possible improvement is the development of pheromone update mechanisms that are invariant to cluster label permutations. In the current implementation, pheromone is associated with explicit cluster labels. Future work could investigate representations that reinforce equivalent clusterings regardless of the numerical labels assigned to the clusters.
 
@@ -1086,5 +1198,124 @@ The multi-seed validation step showed that top configurations are close to each 
 
 Overall, the results show that Ant Colony Optimization is a suitable approach for climate regionalization. Although the centroid-based strategies proved to be the most effective within the tested framework, the developed methodology provides a flexible foundation for investigating alternative optimization objectives, construction strategies and validation methods in future research.
 
+
+\begin{thebibliography}{99}
+
+\bibitem{beck2018}
+Beck, H. E., Zimmermann, N. E., McVicar, T. R., Vergopolan, N., Berg, A., and Wood, E. F. (2018).
+Present and future Köppen-Geiger climate classification maps at 1-km resolution.
+\textit{Scientific Data}, 5, 180214.
+https://doi.org/10.1038/sdata.2018.214
+
+\bibitem{carvalho2016}
+Carvalho, M. J., Melo-Gonçalves, P., Teixeira, J. C., and Rocha, A. (2016).
+Regionalization of Europe based on a K-Means Cluster Analysis of the climate change of temperatures and precipitation.
+\textit{Physics and Chemistry of the Earth, Parts A/B/C}, 94, 22--28.
+https://doi.org/10.1016/j.pce.2016.05.001
+
+\bibitem{clcManual2021}
+Copernicus Land Monitoring Service. (2021).
+Product user manual: CORINE Land Cover from 1990 to 2018 and CORINE Land Cover Changes.
+Version 1.0.
+
+\bibitem{copernicusCLC2018}
+Copernicus Land Monitoring Service. (2018).
+CORINE Land Cover 2018, raster 100 m, Europe, 6-yearly.
+https://doi.org/10.2909/960998c1-1870-4e82-8051-6485205ebbac
+
+\bibitem{deneubourg1991}
+Deneubourg, J.-L., Goss, S., Franks, N., Sendova-Franks, A., Detrain, C., and Chrétien, L. (1991).
+The dynamics of collective sorting: robot-like ants and ant-like robots.
+In \textit{Proceedings of the First International Conference on Simulation of Adaptive Behavior: From Animals to Animats}, 356--363.
+
+\bibitem{dorigo1996}
+Dorigo, M., Maniezzo, V., and Colorni, A. (1996).
+Ant system: optimization by a colony of cooperating agents.
+\textit{IEEE Transactions on Systems, Man, and Cybernetics, Part B: Cybernetics}, 26(1), 29--41.
+https://doi.org/10.1109/3477.484436
+
+\bibitem{dorigo2004}
+Dorigo, M., and Stützle, T. (2004).
+\textit{Ant Colony Optimization}.
+MIT Press.
+
+\bibitem{fovell1993}
+Fovell, R. G., and Fovell, M.-Y. C. (1993).
+Climate zones of the conterminous United States defined using cluster analysis.
+\textit{Journal of Climate}, 6(11), 2103--2135.
+https://doi.org/10.1175/1520-0442(1993)006<2103:CZOTCU>2.0.CO;2
+
+\bibitem{gadm2022}
+GADM. (2022).
+GADM database of Global Administrative Areas, version 4.1.
+https://gadm.org/
+
+\bibitem{handl2006}
+Handl, J., Knowles, J., and Dorigo, M. (2006).
+Ant-based clustering and topographic mapping.
+\textit{Artificial Life}, 12(1), 35--61.
+https://doi.org/10.1162/106454606775186400
+
+\bibitem{hubert1985}
+Hubert, L., and Arabie, P. (1985).
+Comparing partitions.
+\textit{Journal of Classification}, 2, 193--218.
+https://doi.org/10.1007/BF01908075
+
+\bibitem{liu2012}
+Liu, X., Lao, C., Li, X., Liu, Y., and Chen, Y. (2012).
+An integrated approach of remote sensing, GIS and swarm intelligence for zoning protected ecological areas.
+\textit{Landscape Ecology}, 27, 447--463.
+https://doi.org/10.1007/s10980-011-9684-1
+
+\bibitem{koppen1936}
+Köppen, W. (1936).
+Das geographische System der Klimate.
+In W. Köppen and R. Geiger (Eds.), \textit{Handbuch der Klimatologie}, Band 1, Teil C.
+Gebrüder Borntraeger.
+
+\bibitem{milovanovic2017}
+Milovanović, B., Ducić, V., Radovanović, M., and Milivojević, M. (2017).
+Climate regionalization of Serbia according to Köppen climate classification.
+\textit{Journal of the Geographical Institute ``Jovan Cvijić'' SASA}, 67(2), 103--114.
+https://doi.org/10.2298/IJGI1702103M
+
+\bibitem{peel2007}
+Peel, M. C., Finlayson, B. L., and McMahon, T. A. (2007).
+Updated world map of the Köppen-Geiger climate classification.
+\textit{Hydrology and Earth System Sciences}, 11, 1633--1644.
+https://doi.org/10.5194/hess-11-1633-2007
+
+\bibitem{peng2019}
+Peng, J., Zhao, S., Dong, J., Liu, Y., Meersmans, J., Li, H., and Wu, J. (2019).
+Applying ant colony algorithm to identify ecological security patterns in megacities.
+\textit{Environmental Modelling \& Software}, 117, 214--222.
+https://doi.org/10.1016/j.envsoft.2019.03.017
+
+\bibitem{sheridan2011}
+Sheridan, S. C., and Lee, C. C. (2011).
+The self-organizing map in synoptic climatological research.
+\textit{Progress in Physical Geography}, 35(1), 109--119.
+https://doi.org/10.1177/0309133310397582
+
+\bibitem{swenson2019}
+Swenson, L. M., and Grotjahn, R. (2019).
+Using self-organizing maps to identify coherent CONUS precipitation regions.
+\textit{Journal of Climate}, 32(22), 7747--7761.
+https://doi.org/10.1175/JCLI-D-19-0352.1
+
+\bibitem{tong2024}
+Tong, Z., Yang, J., Liu, Y., Zhang, Z., Liu, S., Lu, Y., Pang, B., and An, R. (2024).
+Cooling and optimizing urban heat island based on a thermal knowledge-informed multi-type ant colony model.
+\textit{Remote Sensing of Environment}, 306, 114138.
+https://doi.org/10.1016/j.rse.2024.114138
+
+\bibitem{zhang2021}
+Zhang, Y., Chen, X., Lv, D., and Zhang, Y. (2021).
+Optimization of urban heat effect mitigation based on multi-type ant colony algorithm.
+\textit{Applied Soft Computing}, 112, 107758.
+https://doi.org/10.1016/j.asoc.2021.107758
+
+\end{thebibliography}
 
 \end{document}
