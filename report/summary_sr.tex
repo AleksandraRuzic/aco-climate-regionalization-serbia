@@ -18,7 +18,7 @@ Ovaj rad razvija i evaluira okvir za klimatsku regionalizaciju Srbije zasnovan n
 
 Kao standardna referenca koristi se Köppen-Geigerova klimatska klasifikacija. Ona je jednostavna, laka za implementaciju i široko prihvaćena, ali se zasniva na fiksnim globalnim pragovima. Ti pragovi nisu optimizovani za Srbiju niti za neku posebno definisanu funkciju cilja. Zato cilj istraživanja nije zamena Köppen-Geigerove klasifikacije kao univerzalnog sistema, već ispitivanje da li optimizacioni pristup može da proizvede alternativne regionalizacije koje su lokalno smislenije za Srbiju.
 
-U predloženom okviru svaki mrav konstruiše jednu regionalizaciju-kandidata tako što svaku prostornu jedinicu dodeljuje jednom od pet klimatskih regiona. Broj regiona je postavljen na pet jer nakon agregacije Köppen oznaka na optimizacione čvorove ostaje pet dominantnih klasa. Svako rešenje se ocenjuje funkcijom cilja koja kombinuje klimatsku kompaktnost i prostornu koherentnost. Algoritam traži dodele koje minimizuju ovu funkciju, dok se dobijena rešenja dodatno ocenjuju nezavisnim podacima o tipu vegetacije.
+U predloženom okviru svaki mrav konstruiše jednu regionalizaciju-kandidata tako što svaku prostornu jedinicu dodeljuje jednom od pet klimatskih regiona. Broj regiona je postavljen na pet jer nakon agregacije Köppen oznaka na optimizacione čvorove ostaje pet dominantnih klasa. Rešenja se ocenjuju pomoću više funkcija cilja, koje predstavljaju različite poglede na kvalitet regionalizacije: centroidnu kompaktnost, silhouette separaciju ili konzistentnost shared-nearest-neighbor grafa. Algoritam traži dodele koje minimizuju aktivnu funkciju cilja, dok se dobijena rešenja dodatno ocenjuju nezavisnim podacima o zemljišnom pokrivaču.
 
 \section*{Podaci i preprocesiranje}
 
@@ -26,7 +26,7 @@ Ulazni klimatski skup čine raster slojevi za teritoriju Srbije. Rasteri sadrže
 
 Preprocesiranje pretvara ovu tabelu u oblik koji koriste svi algoritmi klasterovanja. Ono konstruiše matricu promenljivih, prostorne koordinate, težine čvorova, graf susedstva i mapiranje između originalnih raster piksela i optimizacionih čvorova. Zajednički ulazni format je važan jer obezbeđuje da razlike u rezultatima potiču od algoritama, a ne od različite pripreme podataka.
 
-Implementacija podržava više reprezentacija promenljivih. Sirove promenljive koriste sve klimatske promenljive direktno. Promenljive inspirisane Köppen regionalizacijom se grade svodjenjem temperature i padavina na zbirne statistike: srednje vrednosti, minimume, maksimume, opsege i ukupne padavine. Implementirane su i PCA promenljive, pri čemu se PCA primenjuje odvojeno na temperaturne i padavinske promenljive, ali one nisu glavni fokus prikazanih eksperimenata. Sistematski eksperimenti koriste Köppen-inspirisane promenljive.
+Implementacija podržava više reprezentacija promenljivih. Sirove promenljive koriste sve klimatske promenljive direktno. Promenljive inspirisane Köppen regionalizacijom se grade svodjenjem temperature i padavina na zbirne statistike: srednje vrednosti, minimume, maksimume, opsege i ukupne padavine. Implementirane su i PCA promenljive, pri čemu se PCA primenjuje odvojeno na temperaturne i padavinske promenljive. Sve tri reprezentacije su testirane u glavnom eksperimentu i u višestrukoj validaciji po seed-ovima.
 
 Podržana su dva režima optimizacije. U piksel režimu svaki validni raster piksel predstavlja jedan optimizacioni čvor. U superpiksel režimu susedni pikseli se grupišu pomoću MiniBatch KMeans algoritma primenjenog na prostorne koordinate. Svaki superpiksel postaje jedan optimizacioni čvor, njegova promenljiva je prosek promenljivih piksela koje sadrži, a njegova težina je broj tih piksela. Prikazani eksperimenti koriste superpiksele veličine 150 i graf sa 16 najbližih suseda.
 
@@ -36,11 +36,13 @@ Osnovu implementacije čini generički ant-clustering optimizator. On upravlja i
 
 Feromonska matrica ima dimenzije \texttt{broj\_čvorova * broj\_klastera}. Svaka vrednost predstavlja naučenu preferenciju da se određeni čvor dodeli određenom klasteru. Na početku su sve dodele jednako verovatne. Tokom optimizacije evaporacija smanjuje ranije preferencije, a deponovanje feromona pojačava dodele koje su se pojavile u dobrim rešenjima.
 
-Funkcija cilja je ponderisana suma:
+U eksperimentima se koriste tri funkcije cilja. Centroidna funkcija cilja je ponderisana suma:
 \[
 fitness = 0.7 \cdot compactness + 0.3 \cdot spatial\_disagreement.
 \]
 Kompaktnost je normalizovana unutar-klasterska varijansa izračunata pomoću centroida i težina čvorova. Prostorno neslaganje je udeo suseda koji pripadaju drugim klasterima. Manja vrednost funkcije cilja je bolja. Funkcija cilja zato nagrađuje klimatski kompaktne klastere i istovremeno obeshrabruje previše fragmentisane mape.
+
+Silhouette funkcija cilja zamenjuje centroidnu kompaktnost transformisanim silhouette skorom i zadržava prostorni član. SNN funkcija cilja koristi shared-nearest-neighbor graf i meri koliko regionalizacija preseca taj graf. Ove funkcije cilja se tumače odvojeno jer njihove numeričke vrednosti ne predstavljaju istu veličinu.
 
 Testirane su tri strategije ažuriranja feromona. Strategija \textit{all-ants} dozvoljava svim mravima da deponuju feromon, pri čemu bolja rešenja deponuju više. Strategija \textit{best-ant} pojačava samo najbolje rešenje u trenutnoj seriji. Strategija \textit{quality-weighted} deponuje feromon prema relativnom kvalitetu rešenja u odnosu na prosečno rešenje u seriji.
 
@@ -66,22 +68,24 @@ Rad koristi i Adjusted Rand Index u odnosu na KMeans. ARI nije mera kvaliteta, v
 
 \section*{Eksperimentalna postavka i rezultati}
 
-Sistematsko pretraživanje obuhvata 252 konfiguracije prosečene po seed-u, odnosno 504 pojedinačna pokretanja sa dve slučajne inicijalizacije. Eksperimenti koriste pet klastera, 15 mrava, 20 iteracija, superpiksel režim, Köppen-inspirisane promenljive, ciljnu veličinu superpiksela 150 i 16 suseda. Testirane vrednosti su $\alpha \in \{0.75, 1.0, 2.0\}$, $\beta \in \{1.0, 3.0\}$, evaporacije 0.02 i 0.10, uz $q=0.05$.
+Glavni eksperiment obuhvata tri funkcije cilja i tri reprezentacije osobina. Svaka konfiguracija parametara pokrenuta je sa dva slučajna seed-a, a prikazane vrednosti su proseci. Eksperimenti koriste pet klastera, 15 mrava, 20 iteracija, superpiksel režim, ciljnu veličinu superpiksela 150 i 16 suseda. Testirane vrednosti su $\alpha \in \{0.75, 1.0, 2.0\}$, $\beta \in \{1.0, 3.0\}$, evaporacije 0.02 i 0.10, uz $q=0.05$.
 
-Dve referentne regionalizacije su KMeans i Köppen-Geiger. KMeans postiže fitness 0.2376 i ponderisanu ekološku konzistentnost 0.4744. Köppen-Geiger postiže fitness 0.3679 i ekološku konzistentnost 0.4426. KMeans ima bolji fitness jer direktno klasteruje klimatski prostor, dok Köppen-Geiger koristi unapred definisana pravila.
+Dve referentne regionalizacije su KMeans i Köppen-Geiger, evaluirane na Köppen-inspirisanim osobinama. KMeans postiže centroidni fitness 0.2376, silhouette fitness 0.3225, SNN fitness 0.1651 i ponderisanu ekološku konzistentnost 0.4744. Köppen-Geiger postiže centroidni fitness 0.3679, silhouette fitness 0.4149, SNN fitness 0.1062 i ekološku konzistentnost 0.4426. KMeans ima bolji centroidni i silhouette fitness, dok Köppen-Geiger ima bolji SNN fitness.
 
-Kod svih ACO konfiguracija fitness varira mnogo više nego ekološka konzistentnost. Najbolji seed-prosečeni fitness je 0.2325, prosečan fitness 0.4613, a maksimalan 0.9307. Ekološka konzistentnost kreće se od 0.3946 do 0.4846, sa prosekom 0.4448. To pokazuje da izbor algoritma snažno utiče na optimizovani cilj, dok su ekološke razlike manje, ali i dalje važne.
+Köppen-inspirisane i sirove klimatske osobine daju slične rezultate. PCA se ponaša drugačije: pod centroidnom funkcijom cilja je jasno slabiji i ima nižu ekološku konzistentnost, mada pod silhouette i SNN funkcijama cilja može dobiti dobre interne vrednosti. Ekološka konzistentnost varira u užem opsegu od fitness vrednosti, pa razlike u toj eksternoj metrici treba tumačiti pažljivo.
 
-Najbolje rezultate daju centroidne varijante. ACO Centroid ima prosečan fitness 0.2701 i ekološku konzistentnost 0.4700. ACO Centroid + Refinement ima prosečan fitness 0.3141 i ekološku konzistentnost 0.4683. Multi-colony centroid-graph-spatial varijanta je treća, dok graf-lokalni i kohezioni pristupi imaju slabije prosečne rezultate.
+Strategija konstrukcije je najjasniji izvor razlika. ACO Centroid ima najbolju prosečnu vrednost za centroidni, silhouette i SNN fitness u glavnom eksperimentu, kao i najvišu prosečnu ekološku metriku. ACO Centroid + Refinement je obično sledeća najjača centroidna metoda. Multi-colony Centroid Graph Spatial je takođe konkurentan, posebno pod silhouette i SNN funkcijama cilja. Kohezioni pristupi su prosečno slabiji.
 
-Među strategijama ažuriranja feromona, \textit{all-ants} daje najbolje prosečne rezultate: fitness 0.4424 i ekološku konzistentnost 0.4470. \textit{Best-ant} i \textit{quality-weighted} su veoma slične, ali malo slabije. Od parametara, $\beta$ ima najjači uticaj: $\beta=3$ daje znatno bolji prosečni fitness i ekološku konzistentnost od $\beta=1$. Uticaj $\alpha$ i evaporacije je manji.
+Od parametara, $\beta$ ima najjači uticaj: $\beta=3$ daje bolje prosečne rezultate od $\beta=1$ za sve tri funkcije cilja i višu ekološku metriku. Uticaj $\alpha$, strategije ažuriranja feromona i evaporacije je manji. \textit{All-ants} ažuriranje daje najbolje prosečne vrednosti, ali je razlika skromnija nego kod parametra $\beta$.
 
-Najboljih 25 konfiguracija potvrđuje isti zaključak. Najboljih 25 po ekološkoj konzistentnosti pripadaju samo ACO Centroid i ACO Centroid + Refinement varijantama. Najboljih 25 po fitness-u takođe dominiraju ove dve varijante, uz samo jednu kohezionu varijantu sa rafinisanjem.
+Aktivni fitness i ekološka metrika su povezani, ali ta veza nije jednako stabilna kroz rang listu konfiguracija. Niži fitness i viša ekološka konzistentnost daju negativnu korelaciju, a ta veza je najjača kod centroidnog fitness-a. Među najbolje rangiranim konfiguracijama aktivni fitness je slabiji pokazatelj ekološke konzistentnosti, naročito kod SNN funkcije cilja.
+
+Odabrane konfiguracije su zatim ponovo pokrenute sa pet seed-ova. Validacija uglavnom potvrđuje glavni eksperiment. Za centroidni fitness najbolja validirana konfiguracija ostaje ACO Centroid za sve reprezentacije osobina. Silhouette fitness uglavnom podržava isti centroidni obrazac. SNN fitness je mešovitiji: ACO Centroid je najbolji za sirove osobine, Multi-colony Centroid Graph Spatial za Köppen-inspirisane osobine, a Multi-colony Cohesion Graph Spatial za PCA osobine. Najbolje konfiguracije po ekološkoj metrici ostaju u centroidnoj ili centroidno-rafinisanoj porodici.
 
 \section*{Zaključak}
 
-Rezultati pokazuju da je ACO upotrebljiv okvir za klimatsku regionalizaciju Srbije. Najbolja ACO rešenja postižu konkurentan fitness u odnosu na KMeans i bolji fitness od Köppen-Geigerove klasifikacije. Najbolje ekološko ACO rešenje takođe blago poboljšava ponderisanu ekološku konzistentnost u odnosu na KMeans bazni model.
+Rezultati pokazuju da je ACO upotrebljiv okvir za klimatsku regionalizaciju Srbije. Izabrana ACO rešenja poboljšavaju referentne regionalizacije po svojim aktivnim funkcijama cilja. Najbolje ekološko ACO rešenje takođe blago poboljšava ponderisanu ekološku konzistentnost u odnosu na KMeans bazni model.
 
-Najvažniji zaključak je da strategija konstrukcije ima veći uticaj od finog podešavanja parametara. Centroidna konstrukcija je najefikasnija u trenutnom okviru, dok graf i kohezioni pristupi daju slabije rezultate. To može delimično biti posledica centroidne kompaktnosti u funkciji cilja, pa budući rad treba da ispita alternativne funkcije cilja i feromonske reprezentacije koje manje zavise od eksplicitnih oznaka klastera.
+Najvažniji zaključak je da strategija konstrukcije ima veći uticaj od finog podešavanja parametara. Centroidna konstrukcija je najjača ukupno, posebno pod centroidnom i silhouette funkcijom cilja, dok SNN funkcija cilja čini graf i koheziju konkurentnim u pojedinim slučajevima. Sa pet validacionih seed-ova, Wilcoxonov test ne podržava jake tvrdnje o pojedinačnim podešavanjima parametara, pa su najsigurniji zaključci na nivou porodica strategija.
 
 \end{document}

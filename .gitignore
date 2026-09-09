@@ -31,5 +31,5 @@ experiments/results/
 *.lof
 *.lot
 
-# Generated report PDF
-report/main.pdf
+# Generated PDFs
+*.pdf

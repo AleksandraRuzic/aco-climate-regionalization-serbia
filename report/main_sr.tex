@@ -4,6 +4,8 @@
 \usepackage{graphicx}
 \usepackage{tikz-cd}
 \usepackage{multicol}
+\usepackage{multirow}
+\usepackage{float}
 \usepackage[T1]{fontenc}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{1\baselineskip}
@@ -21,26 +23,50 @@
 
 \subsection{Motivacija}
 
-Klimatska regionalizacija predstavlja podelu geografskog prostora na regione sa sličnim klimatskim karakteristikama. Takvi regioni su korisni u poljoprivredi, šumarstvu, ekologiji, hidrologiji, zaštiti biodiverziteta i prostornom planiranju.
+Klimatska regionalizacija je postupak podele geografskog prostora na regione sa sličnim klimatskim karakteristikama. Takvi regioni imaju primenu u brojnim naučnim i praktičnim oblastima, uključujući poljoprivredu, šumarstvo, ekološka istraživanja, hidrologiju, zaštitu biodiverziteta i prostorno planiranje \cite{fovell1993,swenson2019}.
 
-Najpoznatija klimatska regionalizacija je Köppen-Geigerova klasifikacija. Ona klasifikuje klimu na osnovu dugoročnih temperaturnih i padavinskih statistika i više od jednog veka predstavlja standardni sistem za opis klime. Iako je veoma uspešna kao globalna klasifikacija, nije projektovana da optimizuje regionalizaciju za jednu državu ili za konkretnu primenu. Zasniva se na unapred definisanim pragovima koji se primenjuju globalno, pa se ne prilagođava lokalnim klimatskim osobenostima niti eksplicitno optimizuje kvalitet dobijenih regiona.
+Najrasprostranjeniji sistem klimatske regionalizacije je Köppen-Geigerova klimatska klasifikacija. Ona određuje tip klime na osnovu dugoročnih statistika temperature i padavina. Koristi se duže od jednog veka i i dalje je česta u klimatološkim i srodnim istraživanjima \cite{koppen1936,peel2007,beck2018}.
 
-Cilj ovog rada nije zamena Köppen-Geigerove klasifikacije kao univerzalnog sistema, već ispitivanje da li pristup zasnovan na podacima i optimizaciji može da proizvede regionalizaciju pogodniju za Srbiju, uz korišćenje uporedivih klimatskih informacija.
+Iako je Köppen-Geigerova klasifikacija veoma uspešna kao globalni sistem klimatske klasifikacije, ona nije napravljena tako da optimizuje regionalizaciju za jednu državu ili za jednu konkretnu primenu. Klasifikacija se zasniva na unapred definisanim klimatskim pragovima, koji se primenjuju širom sveta \cite{koppen1936,peel2007}. Zbog toga se sistem ne prilagođava lokalnim klimatskim osobenostima i ne optimizuje regione prema izabranoj funkciji cilja.
 
-U predloženom pristupu svaki mrav konstruiše jednu kandidatsku klimatsku regionalizaciju. Mrav dodeljuje svaku prostornu jedinicu jednom od unapred definisanog broja klimatskih regiona. Potpuno rešenje je zato vektor oznaka klastera. Kvalitet rešenja se ocenjuje funkcijom cilja koja kombinuje klimatsku kompaktnost i prostornu koherentnost. Kompaktnost meri sličnost temperaturnih i padavinskih karakteristika unutar regiona, dok prostorna koherentnost kažnjava fragmentaciju tako što meri koliko često susedne prostorne jedinice imaju različite oznake. Optimizacija kolonijom mrava traži dodelu oznaka koja minimizuje ponderisanu kombinaciju ova dva kriterijuma.
+Novija istraživanja klimatske regionalizacije često koriste metode zasnovane na podacima. U takvim metodama regioni se formiraju iz samih podataka, a ne iz fiksnih pravila. Klasterovanje je česta osnovna metoda jer grupiše lokacije sa sličnim klimatskim vrednostima \cite{fovell1993,carvalho2016}. Samoorganizujuće mape se takođe koriste za pronalaženje koherentnih klimatskih i padavinskih regiona \cite{sheridan2011,swenson2019}. Međutim, obične metode klasterovanja mogu da proizvedu fragmentisane mape. Zato je važna i prostorna koherentnost. ACO je ovde koristan zato što može da pretražuje dodele regiona uz istovremeno kombinovanje više kriterijuma \cite{dorigo1996,dorigo2004}.
+
+Cilj ovog rada nije zamena Köppen-Geigerove klasifikacije kao univerzalnog sistema klimatske klasifikacije. Cilj je da se ispita da li optimizacioni pristup zasnovan na podacima može da proizvede regionalizaciju koja je pogodnija za Srbiju, uz korišćenje uporedivih klimatskih informacija.
+
+U predloženom pristupu svaki mrav konstruiše jednu kandidatsku klimatsku regionalizaciju. Jedan mrav dodeljuje svaku prostornu jedinicu jednom od unapred definisanog broja klimatskih regiona. Kompletno rešenje jednog mrava je zato vektor oznaka klastera, sa po jednom oznakom za svaku prostornu jedinicu. Kvalitet svake kandidatske regionalizacije ocenjuje se jednom od više funkcija cilja. Svaka funkcija cilja određuje drugačiji pogled na to šta znači dobra regionalizacija. Optimizacija kolonijom mrava zatim traži dodelu koja minimizuje izabranu funkciju cilja.
 
 \subsection{Ciljevi istraživanja}
+Glavni cilj ovog istraživanja je razvoj optimizacionog okvira za klimatsku regionalizaciju zasnovanog na optimizaciji kolonijom mrava (ACO).
+Trenutni rezultat nije jedna jedina optimizovana klimatska mapa, već optimizacioni okvir koji omogućava poređenje različitih strategija. U ovoj fazi rad obuhvata:
 
-Glavni cilj istraživanja je razvoj optimizacionog okvira za klimatsku regionalizaciju zasnovanog na ACO algoritmu. Rezultat nije samo jedna konačna mapa, već okvir koji omogućava poređenje različitih strategija konstrukcije rešenja, heuristika, načina ažuriranja feromona i parametara.
-
-Rad obuhvata: pripremu klimatskih rastera, konstrukciju grafa i superpiksela, više ACO strategija konstrukcije, poređenje sa KMeans algoritmom, poređenje sa Köppen-Geigerovom regionalizacijom i eksternu validaciju korišćenjem podataka o zemljišnom pokrivaču.
+\begin{itemize}
+    \item tok preprocesiranja kojim se klimatski rasterski podaci prevode u oblik pogodan za optimizaciju
+    \item više ACO strategija konstrukcije rešenja i heurističkih funkcija
+    \item poređenje različitih funkcija cilja
+    \item ispitivanje različitih strategija ažuriranja feromona i parametara algoritma
+    \item poređenje predloženih pristupa sa KMeans algoritmom kao osnovnim modelom
+    \item poređenje nove klasifikacije sa Köppen-Geigerovom regionalizacijom
+    \item spoljašnje mere validacije zasnovane na nezavisnim informacijama o zemljišnom pokrivaču, inspirisane prvobitnom svrhom Köppenove regionalizacije
+\end{itemize}
 
 \section{Köppen-Geigerova klimatska klasifikacija}
 \label{sec:koppen}
 
-Köppen-Geigerova klasifikacija je jedan od najstarijih i najrasprostranjenijih sistema klimatske klasifikacije. Prvobitno ju je razvio Wladimir Köppen, a kasnije je unapređena u saradnji sa Rudolfom Geigerom. Njena početna motivacija bila je opis veze između klime i prirodne vegetacije: oblasti sa sličnim temperaturnim i padavinskim uslovima često podržavaju slične vegetacijske zajednice.
+\subsection{Istorijska pozadina}
 
-Sistem je hijerarhijski. Prvo slovo deli klime na pet glavnih grupa:
+Köppen-Geigerova klimatska klasifikacija jedan je od najstarijih i najčešće korišćenih sistema klimatske klasifikacije. Prvobitno ju je razvio Wladimir Köppen, a kasnije je unapređena u saradnji sa Rudolfom Geigerom \cite{koppen1936,peel2007}. Tokom narednih decenija postala je uobičajena referenca za opis klimatskih regiona širom sveta \cite{peel2007,beck2018}.
+
+Prvobitna motivacija Köppenove klasifikacije bila je opisivanje veze između klime i prirodne vegetacije \cite{koppen1936,peel2007}. Köppen je uočio da oblasti sa sličnim temperaturnim i padavinskim uslovima često podržavaju slične tipove vegetacije. Zbog toga je klasifikaciju osmislio tako da klimatske zone približno odgovaraju glavnim vegetacijskim oblastima sveta.
+
+Za razliku od mnogih regionalnih klimatskih klasifikacija razvijenih za pojedinačne države, Köppen-Geigerov sistem je napravljen kao globalna klasifikacija. Ista pravila klasifikacije primenjuju se na svaku lokaciju. Zbog jednostavnosti, reproduktivnosti i duge istorije, sistem se i dalje široko koristi u klimatologiji, ekološkim istraživanjima, poljoprivredi, šumarstvu i drugim oblastima životne sredine \cite{peel2007,beck2018}.
+
+Klasifikacija je više puta ažurirana novijim klimatskim opažanjima. Ta ažuriranja zadržavaju osnovna načela prvobitne klasifikacije \cite{peel2007,beck2018}. To je omogućilo da sistem ostane relevantan i pored promena globalne klime.
+
+Köppen-Geigerova klasifikacija primenjivana je i direktno na Srbiju. Milovanović i saradnici \cite{milovanovic2017} koristili su temperaturne i padavinske podatke za mapiranje Köppenovih klimatskih tipova u Srbiji. Zato ona predstavlja korisnu lokalnu referencu za ovo istraživanje.
+
+\subsection{Klimatske klase}
+
+Klasifikacija je hijerarhijska. Oznake klasa sastoje se od tri slova. Prvi nivo Köppen-Geigerove klasifikacije deli klime sveta na pet glavnih klimatskih grupa \cite{koppen1936,peel2007}.
 
 \begin{table}[h]
 \centering
@@ -58,119 +84,1250 @@ E & Polarne klime \\
 \caption{Glavne Köppen-Geigerove klimatske grupe.}
 \end{table}
 
-Dodatna slova opisuju padavinski režim i termičke karakteristike. Iako kompletan sistem sadrži veliki broj klasa, u Srbiji je prisutan samo njihov manji podskup. U ovom radu Köppen-Geigerova klasifikacija se koristi kao referentna regionalizacija, a ne kao cilj koji treba zameniti.
+Dodatna slova daju detaljnije informacije o klimatskim uslovima. Drugo slovo obično opisuje padavinski režim, na primer da li su padavine ravnomerno raspoređene tokom godine ili su vezane za određene sezone. Treće slovo opisuje termičke osobine klime, kao što su temperatura leta ili oštrina zime. Kombinovanjem ovih slova dobijaju se klimatske klase kao što su Cfa, Cfb, Dfb i druge.
 
-Prednosti ove klasifikacije su jednostavnost, razumljivost, fizički smisleni klimatski kriterijumi, reproduktivnost i veza sa vegetacijom. Ograničenja su posledica globalnih pragova: granice klasa nisu optimizovane za lokalni prostor, a male razlike oko pragova mogu proizvesti različite oznake i fragmentisane regione.
+Iako potpuni Köppen-Geigerov sistem sadrži veliki broj klimatskih klasa, u Srbiji je prisutan samo njihov manji podskup. Te klase se uvode zajedno sa Köppenovim referentnim skupom podataka koji se koristi kasnije u radu.
 
-\section{Priprema podataka}
+\subsection{Prednosti}
+
+Köppen-Geigerova klasifikacija se koristi duže od jednog veka iz više razloga \cite{peel2007,beck2018}.
+
+\begin{itemize}
+    \item Jednostavna je i lako se tumači.
+    \item Zasnovana je na fizički smislenim klimatskim promenljivim.
+    \item Ista metodologija može da se primeni širom sveta.
+    \item Dobijene klimatske klase su reproduktivne.
+    \item Klase imaju snažnu vezu sa prirodnom vegetacijom.
+    \item Predstavlja zajedničku referencu u velikom broju naučnih disciplina.
+\end{itemize}
+
+Zbog ovih osobina Köppen-Geigerova klasifikacija je pogodna referenca za evaluaciju alternativnih metoda klimatske regionalizacije \cite{peel2007,beck2018}.
+
+\subsection{Ograničenja}
+
+Uprkos širokoj upotrebi, Köppen-Geigerova klasifikacija ima i nekoliko ograničenja kada se koristi za regionalnu klimatsku regionalizaciju \cite{fovell1993,swenson2019}.
+\begin{itemize}
+  \item Klasifikacija je potpuno zasnovana na pravilima. Svaka lokacija se dodeljuje klimatskoj klasi pomoću unapred definisanih pragova, umesto da se dobijeni regioni optimizuju prema konkretnom cilju.
+  \item Granice između klimatskih klasa određene su fiksnim pragovima. Male razlike u temperaturi ili padavinama oko tih pragova mogu dovesti do različitih klimatskih klasa, iako su klimatski uslovi veoma slični.
+  \item U zavisnosti od rezolucije mape, klasifikacija zasnovana na pravilima može da proizvede nezgodno male klastere, zbog čega regionalizacija može delovati fragmentisano i nekoherentno.
+\end{itemize}
+
+Cilj ovog istraživanja zato nije da zameni Köppen-Geigerovu klasifikaciju kao univerzalni sistem klimatske klasifikacije. Ona se koristi kao dobro uspostavljena referenca sa kojom se može porediti predložena regionalizacija zasnovana na optimizaciji.
+
+Ova ograničenja su jedan od razloga zbog kojih se u klimatološkim istraživanjima koriste i metode regionalizacije zasnovane na podacima. Klaster analiza se koristi za definisanje klimatskih regiona na osnovu temperature i padavina \cite{fovell1993}. KMeans je korišćen za regionalizaciju klimatskih promena u Evropi \cite{carvalho2016}. Samoorganizujuće mape su još jedan čest pristup za pronalaženje koherentnih klimatskih ili padavinskih regiona \cite{sheridan2011,swenson2019}. Ovaj rad prati istu opštu ideju: regioni se formiraju iz podataka. Međutim, umesto standardnog algoritma klasterovanja koristi se ACO.
+
+\section{Priprema podataka: klimatski rasteri i konačna tabela}
 \label{sec:data-prep}
 
-Ulazni klimatski podaci dobijeni su iz rastera SANU. Skup sadrži 31 klimatski sloj: 12 mesečnih, 4 sezonska i 1 godišnji sloj temperature, kao i 9 mesečnih, 4 sezonska i 1 godišnji sloj padavina. Svi GeoTIFF rasteri su najpre usklađeni na istu prostornu mrežu: koordinatni sistem, rezoluciju, širinu i visinu. Vrednosti svih rastera su zatim izdvojene za svaku ćeliju mreže i objedinjene u jednu tabelu.
+\subsection{Kratak pregled}
+Prvi korak bio je da se klimatski podaci pripreme u obliku koji može da se koristi za klasterovanje. Ulazni podaci sastojali su se od više .tif rasterskih fajlova, pri čemu svaki fajl predstavlja jednu klimatsku promenljivu za Srbiju. Pošto je rastere trebalo koristiti zajedno, najpre su prebačeni na istu prostornu mrežu. Zatim je vrednost iz svakog rastera izdvojena za svaku ćeliju mreže i sačuvana u jednoj tabeli. Redovi sa nedostajućim vrednostima su uklonjeni, tako da konačna tabela sadrži samo lokacije za koje su dostupne sve klimatske promenljive. Ta tabela je sačuvana kao \texttt{df\_valid.csv} i koristi se kao ulaz za kasnije preprocesiranje i klasterovanje.
 
-Za svaku ćeliju čuvaju se red, kolona, istočna i severna koordinata, kao i vrednosti klimatskih promenljivih. Redovi sa nedostajućim vrednostima su uklonjeni. Konačni skup \texttt{df\_valid.csv} sadrži samo lokacije za koje postoje sve klimatske promenljive i predstavlja osnovni ulaz za dalju obradu i klasterovanje.
+Ovim postupkom uklonjeno je 252.145 ćelija, odnosno 45,55\% pravougaone rasterske mreže. Većina tih ćelija bila je van maske proučavanog područja. To je provereno pomoću GADM granice Srbije \cite{gadm2022}. Samo 3.001 uklonjena ćelija nalazila se unutar GADM poligona. Neke validne ćelije nalazile su se van GADM poligona zato što klimatski raster obuhvata Kosovo, dok korišćena GADM granica Srbije ne obuhvata Kosovo.
+
+Ključni ulazi i izlazi:
+\begin{verbatim}
+  Ulazi:
+  - Klimatski rasterski slojevi (.tif)
+
+  Izlazi:
+  - master_df.csv
+  - df_valid.csv
+
+  Koristi se kasnije u:
+  - preprocessing.py
+\end{verbatim}
+
+\subsection{Detaljno objašnjenje}
+Klimatski podaci korišćeni u ovom radu dobijeni su od Srpske akademije nauka i umetnosti (SANU). Skup podataka sastoji se od rasterskih mapa koje predstavljaju dugoročne klimatske proseke za teritoriju Srbije. Rasteri sadrže mesečne, sezonske i godišnje sažetke temperature i padavina.
+Klimatski skup sadrži 31 rasterski sloj. Slojevi obuhvataju mesečne, sezonske i godišnje proseke temperature vazduha za period 1961--2010, kao i mesečne, sezonske i godišnje ukupne padavine. Ovi slojevi su kontinuirane rasterske promenljive, kao što su temperatura ili količina padavina za različite sezone ili godišnje vrednosti.
+
+\begin{table}[H]
+  \centering
+  \label{tab:climate_layers}
+  \begin{tabular}{lr}
+    \textbf{Tip promenljive} & \textbf{Broj slojeva} \\
+      Mesečna temperatura      & 12 \\
+      Sezonska temperatura     & 4  \\
+      Godišnja temperatura     & 1  \\
+      Mesečne padavine         & 9  \\
+      Sezonske padavine        & 4  \\
+      Godišnje padavine        & 1  \\
+    \textbf{Ukupno}           & \textbf{31} \\
+  \end{tabular}
+  \caption{Klimatski rasterski slojevi korišćeni za izgradnju konačnog skupa podataka.}
+\end{table}
+
+Rasteri mesečnih padavina bili su dostupni samo za devet meseci. Početni podaci su sačuvani kao više GeoTIFF fajlova u folderu \texttt{Karte}. Svaki .tif fajl sadrži jedan klimatski sloj. Pošto je cilj da se sve klimatske promenljive porede na istim prostornim lokacijama, svi rasteri najpre moraju imati istu mrežu. To znači da moraju imati isti:
+
+\begin{itemize}
+  \item koordinatni referentni sistem
+  \item prostornu rezoluciju
+  \item širinu i visinu rastera
+\end{itemize}
+
+U ovoj fazi jedan raster se koristi kao referentni raster. Svi ostali rasteri se zatim resampluju i reprojektuju tako da odgovaraju toj referentnoj mreži. Poravnati rasteri čuvaju se u novom folderu \texttt{Karte\_jedna\_mreza}. Posle ovog koraka svi klimatski slojevi imaju isti oblik i mogu bezbedno da se kombinuju ćeliju po ćeliju.
+
+Sledeći korak je izrada jedne tabele od poravnatih rastera. Za svaku rastersku ćeliju notebook beleži:
+
+\begin{itemize}
+  \item red
+  \item kolonu
+  \item istočnu koordinatu
+  \item severnu koordinatu
+\end{itemize}
+
+Kolone \texttt{row} i \texttt{col} određuju položaj piksela u rasterskoj mreži. Kasnije se koriste za ponovno formiranje rasterskih mapa iz tabele i za spajanje klimatskih podataka sa spoljašnjim skupovima podataka, kao što su vegetacija i Köppen-Geigerova klasifikacija. Vrednosti istočne i severne koordinate predstavljaju stvarne projektovane UTM koordinate svake rasterske ćelije.
+
+Zatim se za svaki klimatski raster dodaje nova kolona u tabelu. Svaki red zato predstavlja jednu prostornu ćeliju, odnosno piksel, a svaka klimatska kolona daje vrednost jedne klimatske promenljive na toj lokaciji.
+
+Na kraju se uklanjaju redovi sa nedostajućim vrednostima. To je važno zato što neke rasterske ćelije mogu biti van validnog područja, odnosno van Srbije, ili neke promenljive možda nemaju vrednosti na svim lokacijama. Konačna tabela zadržava samo redove u kojima su dostupne sve klimatske promenljive.
+
+Notebook prijavljuje:
+\begin{verbatim}
+  Ukupan broj ćelija: 553 539
+  Validne ćelije posle uklanjanja nedostajućih vrednosti: 301 394
+  Broj klimatskih kolona: 31
+\end{verbatim}
+
+Konačni izlaz je sačuvan kao \texttt{df\_valid.csv}. Ovaj fajl je glavni ulaz za naredne faze projekta. Sadrži prostorne koordinate i sve klimatske promenljive za validne ćelije mreže.
 
 \section{Preprocesiranje}
 \label{sec:preprocessing}
 
-Modul za preprocesiranje transformiše klimatski dataframe u oblik pogodan za optimizacione algoritme. On bira ili konstruiše ulazne osobine, opciono grupiše piksele u superpiksele, standardizuje vrednosti, pravi prostorni graf susedstva i vraća mapiranje između originalnih piksela i optimizacionih čvorova.
+\subsection{Kratak pregled}
+Svrha modula za preprocesiranje jeste da klimatsku tabelu pretvori u reprezentaciju koja se može direktno koristiti u algoritmima klasterovanja. Pored izbora ulaznih osobina, modul pravi prostorni graf susedstva, po potrebi grupiše piksele u superpiksele, standardizuje vrednosti osobina i vraća sve informacije potrebne optimizacionim algoritmima. Izlaz ovog modula je zajednički ulazni format koji koriste sve metode klasterovanja.
 
-Podržana su tri tipa osobina. Sirove klimatske promenljive koriste sve dostupne raster slojeve direktno. Köppen-inspirisane osobine koriste zbirne statistike temperature i padavina: srednju, minimalnu i maksimalnu temperaturu, temperaturni opseg, srednje, minimalne i maksimalne padavine, ukupne padavine i padavinski opseg. PCA osobine su implementirane tako što se temperaturne i padavinske promenljive transformišu odvojeno, ali nisu bile glavni predmet prikazanih eksperimenata.
+\subsection{Detaljno objašnjenje}
+\subsubsection{Zajednički tok preprocesiranja}
 
-U piksel režimu svaki originalni raster piksel je optimizacioni čvor. U superpiksel režimu susedni pikseli se prvo grupišu pomoću MiniBatch KMeans algoritma nad prostornim koordinatama. Klimatske osobine superpiksela dobijaju se prosečenjem osobina njegovih piksela, a veličina superpiksela se čuva kao težina čvora. Te težine se koriste pri računanju centroida i kompaktnosti, kako bi veći superpikseli imali proporcionalan uticaj.
+Svi algoritmi klasterovanja koriste isti tok preprocesiranja. Time se obezbeđuje da razlike u konačnim rezultatima potiču od samog optimizacionog algoritma, a ne od razlika u ulaznim podacima.
 
-Graf susedstva se gradi metodom $k$ najbližih suseda nad prostornim koordinatama optimizacionih čvorova. U eksperimentima je korišćen superpiksel režim, Köppen-inspirisane osobine, \texttt{target\_size = 150} i \texttt{k\_neighbors = 16}.
+Modul za preprocesiranje prima tabelu napravljenu u prethodnom koraku (\texttt{df\_valid.csv}) i proizvodi standardizovanu reprezentaciju koja se sastoji od:
+\begin{itemize}
+  \item matrice osobina (\texttt{X\_model})
+  \item prostornih koordinata svakog čvora
+  \item težina čvorova
+  \item grafa susedstva
+  \item mapiranja između originalnih piksela i optimizacionih čvorova
+\end{itemize}
 
-\section{ACO okvir, funkcija cilja i feromoni}
+U zavisnosti od izabranog režima, jedan optimizacioni čvor može predstavljati jedan piksel ili agregirani superpiksel.
+
+\subsubsection{Konstrukcija osobina}
+Jedan od ciljeva projekta jeste da se ispita kako različite reprezentacije osobina utiču na kvalitet klimatske regionalizacije. Zbog toga modul za preprocesiranje podržava tri različita skupa osobina.
+
+\textbf{Sirove klimatske promenljive} \\
+Najjednostavnija reprezentacija koristi sve klimatske promenljive direktno. Svaki rasterski sloj postaje jedna osobina, pa vektor osobina sadrži sve dostupne temperaturne i padavinske promenljive. Ova reprezentacija čuva sve dostupne informacije, ali sadrži i veliki broj korelisanih promenljivih. U kasnijim eksperimentima koristi se zajedno sa Köppen-inspirisanim i PCA reprezentacijama, kako bi se proverilo da li zaključci zavise od načina konstrukcije osobina.
+
+\textbf{Köppen-inspirisane osobine} \\
+Umesto direktnog korišćenja svih klimatskih promenljivih, druga opcija konstruiše manji skup zbirnih statistika inspirisanih Köppenovom klimatskom klasifikacijom. Za svaku prostornu lokaciju računaju se sledeće veličine:
+
+\begin{itemize}
+  \item srednja temperatura
+  \item minimalna temperatura
+  \item maksimalna temperatura
+  \item temperaturni opseg
+  \item srednje padavine
+  \item minimalne padavine
+  \item maksimalne padavine
+  \item ukupne padavine
+  \item padavinski opseg
+\end{itemize}
+
+Implementirane su i dodatne opcione promenljive, kao što su standardna devijacija temperature, standardna devijacija padavina i jednostavan indeks suvoće, iako nisu korišćene u trenutnim eksperimentima. Ovaj režim je bio početna reprezentacija osobina i koristi se kao glavna referentna reprezentacija u izveštaju.
+
+\textbf{PCA osobine} \\
+Treća opcija primenjuje analizu glavnih komponenti (PCA) odvojeno na temperaturne i padavinske promenljive. Umesto da se sve promenljive spoje u jedan PCA model, dve grupe se transformišu nezavisno, čime se dobijaju zasebne glavne komponente za temperaturu i padavine. Tako se zadržava razlika između dve klimatske komponente, uz smanjenje dimenzionalnosti. Ova reprezentacija je evaluirana istim protokolom glavnog eksperimenta i višestruke validacije po seed-ovima kao i ostale reprezentacije.
+
+\subsubsection{Generisanje superpiksela}
+Modul za preprocesiranje podržava dva režima optimizacije. U piksel režimu svaka originalna rasterska ćelija postaje jedan optimizacioni čvor. U superpiksel režimu susedni pikseli se najpre grupišu u veće prostorne jedinice pomoću MiniBatch KMeans algoritma, primenjenog samo na prostorne koordinate. Prosečne klimatske vrednosti svih piksela koji pripadaju jednom superpikselu postaju vektor osobina novog optimizacionog čvora. Pošto svaki čvor grafa predstavlja različit broj originalnih rasterskih ćelija, veličina svakog superpiksela čuva se kao težina čvora. Tako veće oblasti proporcionalno doprinose optimizaciji, odnosno računanju centroida klastera i fitness vrednosti.
+
+\subsubsection{Skaliranje osobina}
+Pošto klimatske promenljive imaju različite numeričke opsege, vrednosti osobina se standardizuju pre klasterovanja. Modul primenjuje standardizaciju nakon što je konačna reprezentacija osobina konstruisana. Time se sprečava da promenljive sa većim numeričkim opsegom dominiraju proračunima udaljenosti koje koriste optimizacioni algoritmi.
+
+\subsubsection{Graf susedstva}
+Nakon što su optimizacioni čvorovi formirani, prostorni graf susedstva konstruiše se algoritmom $k$ najbližih suseda nad osobinama reda i kolone. Ovaj graf se kasnije koristi u nekoliko heurističkih funkcija i u prostornoj komponenti funkcije cilja. Broj suseda je podesiv, što omogućava eksperimente sa različitim veličinama susedstva.
+
+\subsubsection{Konačna reprezentacija modela}
+Poslednja funkcija modula spaja sve korake preprocesiranja u jedan tok. U zavisnosti od izabrane konfiguracije, ona:
+\begin{itemize}
+  \item gradi izabranu reprezentaciju osobina
+  \item po potrebi pravi superpiksele
+  \item standardizuje vrednosti osobina
+  \item konstruiše graf susedstva
+  \item vraća sve informacije potrebne algoritmima klasterovanja
+\end{itemize}
+Dobijena struktura se zatim nepromenjena prosleđuje svim optimizacionim algoritmima implementiranim u nastavku projekta.
+
+\section{Optimizator za klasterovanje pomoću mrava, funkcije cilja i ažuriranje feromona}
 \label{sec:framework}
 
-Glavni optimizator je \texttt{AntClusteringOptimizer}. On upravlja spoljašnjom petljom algoritma: iteracijama, mravima, evaluacijom rešenja, ažuriranjem feromona i čuvanjem najboljeg rešenja. Konstrukcija jednog rešenja nije ugrađena u optimizator, već se prosleđuje kao funkcija. To omogućava fer poređenje različitih strategija pod istim uslovima.
+\subsection{Kratak pregled}
+Ovaj deo koda definiše glavni optimizacioni okvir. Cilj je bio da se napravi jedan zajednički optimizator koji može da pokreće različite strategije klasterovanja zasnovane na mravima pod istim uslovima. Optimizator ne odlučuje kako jedan mrav gradi rešenje klasterovanja. Taj deo se prosleđuje kao posebna funkcija konstrukcije. Kada svaki mrav izgradi rešenje, rešenje se ocenjuje jednom od testiranih funkcija cilja i zatim se ažuriraju vrednosti feromona.
 
-Feromonska matrica ima oblik \texttt{broj čvorova $\times$ broj klastera}. Vrednost \texttt{pheromone[i,k]} predstavlja naučenu preferenciju da čvor $i$ bude dodeljen klasteru $k$. Na početku su sve dodele jednake, a pri normalizaciji svaki red matrice ima zbir 1.
+Metod je povezan sa ranijim radovima o klasterovanju zasnovanom na mravima i topografskom mapiranju \cite{deneubourg1991,handl2006}. Ti radovi pokazuju kako se jednostavni agenti nalik mravima mogu koristiti za formiranje grupa iz podataka. Ovaj rad koristi istu opštu ideju, ali je primenjuje na klimatsku regionalizaciju. Fokus je na poređenju strategija konstrukcije prostornih klimatskih regiona, a ne na reprodukovanju nekog standardnog algoritma klasterovanja zasnovanog na mravima.
 
-Funkcija cilja je ponderisana suma:
-\[
-fitness = w_c C + w_s S,
-\]
-gde je $C$ normalizovana kompaktnost, a $S$ prostorno neslaganje. U eksperimentima su korišćene vrednosti $w_c=0.7$ i $w_s=0.3$. Kompaktnost je odnos unutar-klasterske varijanse i ukupne varijanse podataka. Prostorno neslaganje je udeo usmerenih susedskih veza čiji krajevi imaju različite oznake.
+ACO je korišćen i u prostornoj optimizaciji u oblasti životne sredine. Primeri uključuju zoniranje zaštićenih ekoloških oblasti, detekciju stanišnih koridora, optimizaciju korišćenja zemljišta i ublažavanje urbanog toplotnog ostrva \cite{liu2012,peng2019,zhang2021,tong2024}. Ti radovi nisu istraživanja klimatske regionalizacije. Ipak, pokazuju da ACO može biti koristan za prostorne probleme sa ekološkim ciljevima ili ciljevima kompaktnosti.
 
-Implementirane su tri strategije ažuriranja feromona. Kod \textit{all-ants} ažuriranja svaki mrav deponuje feromon nakon evaporacije, pri čemu je depozit proporcionalan \texttt{q / fitness}. Kod \textit{best-ant} ažuriranja feromon deponuje samo najbolji mrav u trenutnoj seriji. Kod \textit{quality-weighted} ažuriranja depozit zavisi od relativnog kvaliteta rešenja u odnosu na prosečno rešenje u seriji.
+U eksperimentima se koriste tri funkcije cilja. Svaka funkcija cilja određuje drugačiji pogled na to šta znači dobra regionalizacija. Centroidna funkcija cilja favorizuje kompaktne grupe u prostoru osobina. Silhouette funkcija cilja poredi koheziju i separaciju. Grafovska funkcija cilja naglašava lokalnu sličnost na prostornom grafu susedstva. Sve tri funkcije cilja testiraju se na istoj mreži parametara.
+
+Feromonska matrica čuva naučenu preferenciju za dodelu svakog čvora svakom klasteru.
+
+\subsection{Detaljno objašnjenje}
+
+\subsubsection{Glavni optimizator}
+Glavni optimizator implementiran je u klasi \texttt{AntClusteringOptimizer}. Njegova uloga je da upravlja opštom petljom optimizacije kolonijom mrava.
+
+Optimizator je namerno generički. On ne sadrži samu logiku konstrukcije rešenja. Umesto toga, kao ulaz prima nekoliko funkcija:
+\begin{itemize}
+  \item \texttt{construct\_solution\_fn}
+  \item \texttt{fitness\_fn}
+  \item \texttt{pheromone\_update\_fn}
+  \item \texttt{pheromone\_init\_fn}
+\end{itemize}
+To znači da se različite strategije klasterovanja mogu porediti fer. Spoljašnja optimizaciona petlja ostaje ista, a menja se samo strategija konstrukcije.
+
+U svakoj iteraciji optimizator pokreće više mrava. Svaki mrav konstruiše jedno kompletno rešenje klasterovanja. Rešenje se sastoji od:
+\begin{itemize}
+  \item oznaka
+  \item centroida
+\end{itemize}
+Niz oznaka sadrži dodeljeni klaster za svaki čvor. Niz centroida sadrži centre klastera izračunate na osnovu te dodele.
+
+Kada je rešenje konstruisano, ocenjuje se funkcijom cilja. Za svakog mrava optimizator čuva:
+\begin{itemize}
+  \item fitness
+  \item oznake
+  \item centroide
+  \item članove funkcije cilja
+\end{itemize}
+
+Najbolje do tada pronađeno rešenje čuva se tokom celog optimizacionog procesa. Na kraju optimizator čuva konačni najbolji rezultat u:
+\begin{itemize}
+  \item \texttt{labels\_}
+  \item \texttt{centroids\_}
+  \item \texttt{best\_fitness\_}
+  \item \texttt{history\_}
+  \item \texttt{term\_history\_}
+  \item \texttt{pheromone\_}
+\end{itemize}
+
+Lista \texttt{history\_} čuva globalno najbolji fitness posle svake iteracije. Lista \texttt{term\_history\_} čuva detaljnije informacije, uključujući najbolji fitness u iteraciji, srednji fitness, standardnu devijaciju, kompaktnost, prostorno neslaganje i minimalne i maksimalne vrednosti feromona.
+
+\subsubsection{Feromonska matrica}
+Feromonska matrica ima oblik:
+\texttt{broj čvorova × broj klastera}.
+Svaka vrednost znači:
+\texttt{pheromone[i, k] = naučena preferencija da se čvor i dodeli klasteru k}.
+Na početku sve dodele čvor-klaster imaju jednake feromonske vrednosti. Ako se koristi normalizacija po redovima, zbir svakog reda je 1. Ova reprezentacija je pogodna za klasterovanje zato što je konačna odluka za svaki čvor upravo izbor jedne oznake klastera. \texttt{broj klastera} je 5, na osnovu broja glavnih Köppenovih klasa prisutnih u Srbiji.
+
+\subsubsection{Opšta optimizaciona petlja}
+Optimizacioni proces može se sažeti ovako:
+\begin{verbatim}
+inicijalizuj feromon
+za svaku iteraciju:
+    za svakog mrava:
+        konstruiši rešenje klasterovanja
+        evaluiraj rešenje
+        sačuvaj rešenje
+    ažuriraj feromon
+    ažuriraj globalno najbolje rešenje
+    sačuvaj statistiku iteracije
+\end{verbatim}
+
+Implementacija omogućava i ažuriranje feromona posle manjih grupa mrava. Ako veličina grupe nije zadata, feromon se ažurira jednom nakon svih mrava u iteraciji. Ako je veličina grupe zadata, feromon se ažurira više puta unutar iste iteracije. To je bilo korisno tokom eksperimentisanja jer je omogućilo poređenje ponašanja učenja na nivou iteracije, kolonije, grupe i pojedinačnog mrava.
+
+\subsubsection{Funkcije cilja}
+U eksperimentima se koriste tri funkcije cilja. One definišu tri različita optimizaciona cilja. U sva tri slučaja niže vrednosti su bolje.
+
+\textbf{Centroidna funkcija cilja} \\
+Centroidna funkcija cilja je ponderisana suma dva člana:
+\begin{verbatim}
+fitness =
+    w_compactness * compactness
+  + w_spatial * spatial_disagreement
+\end{verbatim}
+
+Prvi član je kompaktnost u prostoru osobina. On meri koliko su čvorovi blizu centroida klastera kome su dodeljeni. Vrednost se normalizuje ukupnom varijansom podataka, kako bi se lakše poredile različite reprezentacije osobina. Svi proračuni centroida i varijanse ponderišu se težinama superpiksela opisanim u fazi preprocesiranja. Time optimizacija približava rezultat koji bi se dobio kada bi algoritam radio direktno nad originalnim rasterskim ćelijama.
+Drugi član je prostorno neslaganje. On meri udeo parova susednih čvorova koji imaju različite oznake klastera. Ako mnogo susednih čvorova pripada različitim klasterima, mapa je fragmentisana i prostorno neslaganje je veliko. Ako susedni čvorovi često pripadaju istom klasteru, prostorno neslaganje je malo.
+
+Podrazumevani ponderi korišćeni u eksperimentima bili su:
+\begin{verbatim}
+  w_compactness = 0.7
+  w_spatial = 0.3
+\end{verbatim}
+
+To znači da funkcija cilja daje veći značaj kompaktnosti u prostoru osobina, ali i dalje podstiče prostorno glađe klastere.
+
+\textbf{Silhouette funkcija cilja} \\
+Silhouette funkcija cilja koristi silhouette skor umesto centroidne kompaktnosti. Za svaki čvor porede se dve udaljenosti. Prva udaljenost je prosečna udaljenost do čvorova u istom klasteru. Druga udaljenost je prosečna udaljenost do najbližeg drugog klastera. Visok silhouette skor znači da je čvor bliži svom klasteru nego drugim klasterima.
+
+Pošto optimizator minimizuje fitness, silhouette skor se pretvara u minimizacioni član:
+\begin{verbatim}
+silhouette_term = (1 - mean_silhouette) / 2
+\end{verbatim}
+
+Konačni fitness je:
+\begin{verbatim}
+fitness =
+    w_silhouette * silhouette_term
+  + w_spatial * spatial_disagreement
+\end{verbatim}
+
+\textbf{SNN funkcija cilja} \\
+SNN funkcija cilja koristi shared-nearest-neighbor graf. Ovaj graf povezuje čvorove koji imaju slična lokalna susedstva u prostoru osobina. Funkcija cilja meri koliki deo tog grafa klasterovanje preseca. Ako mnogo jakih SNN veza povezuje čvorove sa različitim oznakama, SNN presek je veliki.
+
+Konačni fitness je:
+\begin{verbatim}
+fitness =
+    w_snn * snn_cut
+  + w_spatial * spatial_disagreement
+\end{verbatim}
+
+Ovaj cilj ne koristi centroide klastera u svom glavnom članu. Zato kvalitet regionalizacije definiše drugačije od centroidne funkcije cilja.
+
+\subsubsection{Kompaktnost}
+Kompaktnost se računa kao:
+\texttt{unutar-klasterska varijansa / ukupna varijansa}. Brojilac meri koliko je svaki čvor udaljen od centroida klastera kome je dodeljen. Imenilac meri ukupnu varijansu celog skupa podataka oko globalnog centroida. Ova normalizacija čini član kompaktnosti bezdimenzionim. To je korisno zato što eksperimenti mogu koristiti različite skupove osobina, kao što su sirove klimatske promenljive, PCA osobine ili Köppen-inspirisane osobine.
+
+Važno je napomenuti da je ovaj član kompaktnosti centroidni. Zato, čak i kada strategija konstrukcije koristi ne-centroidnu heuristiku, konačni fitness i dalje delimično nagrađuje centroidnu strukturu klastera. To nije greška u implementaciji, ali je važno za tumačenje rezultata.
+
+\subsubsection{Prostorno neslaganje}
+Prostorno neslaganje koristi graf susedstva napravljen tokom preprocesiranja. Za svaki čvor funkcija proverava njegove susede. Ako sused ima drugačiju oznaku, to se računa kao neslaganje. Konačni skor je:
+\texttt{broj susedskih veza sa neslaganjem / ukupan broj susedskih veza}. Vrednost je između 0 i 1. Vrednost bliska 0 znači da susedni čvorovi uglavnom pripadaju istom klasteru. Veća vrednost znači da je klasterovanje fragmentisanije.
+
+Funkcija podržava dva režima:
+\begin{enumerate}
+  \item usmereno brojanje suseda;
+  \item simetrično brojanje suseda.
+\end{enumerate}
+
+U trenutnim eksperimentima korišćena je usmerena verzija, jer direktno odgovara grafu $k$ najbližih suseda koji proizvodi preprocesiranje.
+
+\subsubsection{Strategije ažuriranja feromona}
+Implementirane su tri strategije ažuriranja feromona.
+
+\textbf{All-ants ažuriranje} \\
+Ova strategija koristi informacije iz cele populacije mrava, a ne samo iz najboljeg rešenja. U ovoj strategiji svaki mrav deponuje feromon posle evaporacije. Pošto je niži fitness bolji, niži fitness proizvodi veći depozit. Bolja rešenja deponuju više feromona jer se depozit računa kao:
+\texttt{q / fitness}
+
+\textbf{Best-ant ažuriranje} \\
+U ovoj strategiji feromon deponuje samo najbolji mrav iz trenutne grupe. To je više eksploatativno od all-ants ažuriranja. Jače usmerava pretragu ka najboljem rešenju pronađenom u trenutnoj grupi, ali može i brže da smanji raznovrsnost.
+
+\textbf{Quality-weighted ažuriranje} \\
+U ovoj strategiji depozit zavisi od toga koliko je svako rešenje bolje od prosečnog rešenja u trenutnoj grupi. Rešenja koja su lošija od proseka ili blizu proseka dobijaju malo feromona ili ga uopšte ne dobijaju. Najbolje rešenje dobija najjače pojačanje. Ova strategija je dodata da bi deponovanje feromona zavisilo od relativnog kvaliteta rešenja, a ne samo od apsolutne fitness vrednosti.
+
+\subsubsection{Trenutno stanje implementacije}
+Ovaj deo implementacije je relativno stabilan. Optimizator, funkcije cilja i funkcije za ažuriranje feromona čine zajednički eksperimentalni okvir. Oni nisu specifični za jednu heuristiku ili jednu strategiju konstrukcije.
+
+Izbor funkcije cilja utiče na to kako rezultate treba tumačiti. Centroidna funkcija cilja nagrađuje centroidnu kompaktnost, pa može favorizovati rešenja slična KMeans-u. Druge funkcije cilja drugačije definišu kvalitet regionalizacije. To omogućava poređenje strategija konstrukcije pod različitim optimizacionim ciljevima.
 
 \section{Strategije konstrukcije i heuristike}
 \label{sec:strategies}
 
-Strategije konstrukcije određuju kako jedan mrav dodeljuje oznake čvorovima. Opšti oblik verovatnoće je proizvod feromonskog skora i heurističkog skora. Čvorovi se obilaze slučajnim redosledom, a oznaka se bira probabilistički.
+\subsection{Kratak pregled}
+Ovaj deo koda definiše kako jedan mrav gradi jedno rešenje klasterovanja. Optimizator opisan u prethodnom odeljku upravlja spoljašnjom petljom, ali ne odlučuje kako se oznake dodeljuju. Tu odluku donose strategije konstrukcije.
 
-Osnovni ACO konstruiše rešenje u jednom prolazu. U centroidnoj varijanti heuristika zavisi od udaljenosti čvora do privremenih centroida. U kohezionoj varijanti heuristika poredi čvor sa već dodeljenim članovima klastera.
+Svaka strategija konstrukcije dodeljuje svaki čvor jednom od dostupnih klastera. Verovatnoća dodele zavisi od dva dela: feromonske vrednosti naučene od prethodnih mrava i heurističkog skora izračunatog iz trenutnog parcijalnog rešenja. Testirano je više heuristika, uključujući centroidnu sličnost, graf-lokalnu sličnost, kohezionu sličnost i prostornu podršku.
 
-ACO sa rafinisanjem izvodi više prolaza dodele i ponovnog računanja centroida. U prikazanim eksperimentima korišćena su tri koraka rafinisanja. Mehanizam rafinisanja može se kombinovati sa centroidnom ili kohezionom heuristikom.
+Svrha ovog dela projekta bila je da se ispitaju različiti načini konstrukcije klimatskih regiona, posebno alternative koje su manje direktno vezane za KMeans-logiku centroidne kompaktnosti.
 
-Graf-lokalna konstrukcija koristi prostorni graf susedstva. Za čvor koji se trenutno dodeljuje posmatraju se susedi koji već imaju oznake. Ako je čvor sličan već dodeljenim susedima u nekom klasteru, taj klaster dobija veći skor. Kada je lokalni dokaz slab, heuristika koristi centroidni signal kao rezervu.
+\subsection{Detaljno objašnjenje}
 
-Multi-colony strategija deli mrave u kolonije koje koriste različite heuristike, ali dele istu feromonsku matricu. Testirane su varijante sa centroidnom, graf-lokalnom i prostornom heuristikom, kao i varijante sa kohezionom, graf-lokalnom i prostornom heuristikom.
+\subsubsection{Uloga strategija konstrukcije}
+Strategija konstrukcije određuje kako jedan mrav pravi kompletno rešenje klasterovanja. Na početku konstrukcije svi čvorovi su nedodeljeni. Mrav zatim obilazi čvorove slučajnim redosledom. Za svaki čvor računa verovatnoću dodele tom čvoru svakom klasteru. Čvor se zatim dodeljuje uzorkovanjem iz te raspodele verovatnoće. Kada su svi čvorovi dodeljeni, centroidi se ponovo računaju i kompletno rešenje se vraća optimizatoru.
 
-Centroidna heuristika favorizuje klastere čiji je trenutni centroid blizu čvora. Graf-lokalna heuristika koristi sličnost sa već dodeljenim susedima. Prostorna heuristika koristi samo oznake dodeljenih suseda i podstiče glatkije mape. Koheziona heuristika uzorkuje postojeće članove klastera i meri prosečnu udaljenost do njih; koristi se tek kada klaster ima dovoljno članova.
+Uopšteno, verovatnoća zavisi od: \texttt{feromonski skor × heuristicki skor}. Feromonski skor dolazi iz prethodnih iteracija i predstavlja naučenu preferenciju. Heuristički skor računa se iz trenutnog parcijalnog rešenja i zavisi od izabrane strategije konstrukcije.
+
+\paragraph{Inicijalizacija}
+
+Pre početka konstrukcije rešenja, sve prostorne jedinice označavaju se kao nedodeljene tako što im se oznaka klastera postavi na $-1$. Inicijalizacija centroida klastera zavisi od izabrane strategije konstrukcije.
+
+Za centroidni ACO i ACO Refinement strategije svi centroidi se na početku postavljaju na nulu i ažuriraju se kako se čvorovi dodeljuju klasterima.
+
+Grafovskim strategijama su potrebne procene centroida pre nego što je dodeljen dovoljan broj susednih čvorova. Zato se početni centroidi generišu pomoću KMeans++ postupka inicijalizacije.
+
+\subsubsection{Osnovna ACO konstrukcija}
+
+Osnovna ACO strategija konstrukcije gradi jedno rešenje u jednom prolazu. Obilazi sve čvorove jednom, slučajnim redosledom, i svakom čvoru dodeljuje klaster.
+
+Postupak konstrukcije je nezavisan od korišćene heuristike. U centroidnoj varijanti heuristički skor se računa iz udaljenosti između trenutnog čvora i privremenog centroida svakog klastera. U kohezionoj varijanti heuristika se zasniva na sličnosti između trenutnog čvora i čvorova koji su već dodeljeni svakom klasteru.
+
+\subsubsection{ACO sa rafinisanjem}
+
+Strategija rafinisanja proširuje konstrukciju u jednom prolazu. Posle konstruisanja početnog rešenja, centroidi klastera se ponovo računaju i čvorovi se ponovo dodeljuju. Ovaj postupak se ponavlja više puta, čime se rešenju omogućava da se popravi nakon početnog prolaza konstrukcije.
+
+Postupak rafinisanja sastoji se od sledećih koraka:
+
+\begin{enumerate}
+    \item dodeli oznake klastera,
+    \item ponovo izračunaj centroide klastera,
+    \item ponovo dodeli oznake klastera,
+    \item ponovo izračunaj centroide klastera,
+    \item ponavljaj zadati broj iteracija rafinisanja.
+\end{enumerate}
+
+Kao i osnovna ACO strategija, postupak rafinisanja može se kombinovati i sa centroidnom i sa kohezionom heuristikom. Sam mehanizam rafinisanja je nezavisan od heuristike korišćene za dodelu čvorova.
+
+\subsubsection{Graf-lokalna konstrukcija}
+Graf-lokalna strategija konstrukcije koristi prostorni graf susedstva tokom dodele. Za čvor koji se trenutno dodeljuje, algoritam proverava koji su njegovi susedni čvorovi već dobili oznake. Zatim poredi vektor osobina tog čvora sa vektorima osobina već dodeljenih suseda u svakom kandidatskom klasteru. Ako je čvor sličan susednim čvorovima koji već pripadaju klasteru $k$, tada klaster $k$ dobija veći heuristički skor.
+
+Međutim, ova heuristika sadrži i centroidni rezervni signal. Kada je malo susednih čvorova već dodeljeno, lokalni grafovski dokaz je slab. U tom slučaju heuristika se delimično oslanja na udaljenost do inicijalizovanih centroida.
+
+Zato ova strategija nije čisto grafovska. Tačnije je opisati je kao: \texttt{lokalna grafovska sličnost sa centroidnom rezervom}.
+
+\subsubsection{Multi-colony konstrukcija}
+Multi-colony strategija uvedena je da bi različiti tipovi mrava mogli da koriste različite heuristike, a da pritom dele istu feromonsku matricu. U ovoj strategiji mravi su podeljeni u kolonije. Svaka kolonija ima svoju heurističku funkciju. Na primer, jedna kolonija može koristiti centroidnu heuristiku, druga grafovsku heuristiku, a treća prostornu heuristiku. Ovo je dodato da bi se ispitalo da li kombinovanje više vrsta lokalnih pravila odlučivanja može proizvesti bolje klasterovanje od oslanjanja na jednu heuristiku.
+
+Dodela kolonija trenutno se radi redom, prema indeksu mrava. Ako postoje tri kolonije i petnaest mrava, prva grupa mrava pripada prvoj koloniji, druga grupa drugoj, a poslednja grupa trećoj koloniji.
+
+Sve kolonije i dalje upisuju u istu feromonsku matricu. To znači da različita ponašanja u pretrazi mogu doprineti istim naučenim preferencijama dodele.
+
+\subsubsection{Heuristike}
+
+\textbf{Centroidna heuristika} \\
+Centroidna heuristika daje veću verovatnoću klasterima čiji je trenutni centroid blizu čvora koji se dodeljuje. Ova heuristika je najbliža logici KMeans algoritma, iako je dodela i dalje stohastička i pod uticajem feromona.
+
+Za svaki kandidatski klaster računa se kvadrat udaljenosti između čvora i centroida. Manja udaljenost daje veći skor.
+
+\textbf{Graf-lokalna heuristika} \\
+Graf-lokalna heuristika koristi već dodeljene prostorne susede. Za svaki kandidatski klaster proverava da li neki dodeljeni susedi već pripadaju tom klasteru. Ako pripadaju, računa se udaljenost u prostoru osobina između trenutnog čvora i tih suseda. Manja prosečna udaljenost daje veći skor.
+
+Pošto na početku konstrukcije mnogi susedi još mogu biti nedodeljeni, ova heuristika meša grafovski skor sa centroidnim skorom. Što je više dodeljenih suseda dostupno, to grafovski skor ima veći značaj.
+
+\textbf{Prostorna heuristika} \\
+Prostorna heuristika koristi samo oznake već dodeljenih suseda. Ne koristi udaljenosti u prostoru osobina niti centroide. Ako mnogo dodeljenih suseda već pripada određenom klasteru, taj klaster dobija veći skor.
+
+Ova heuristika je uvedena da bi podstakla prostorno glađe i manje fragmentisane mape klastera. Nikada se ne koristi samostalno, već samo u strategijama sa više heuristika.
+
+\textbf{Koheziona heuristika} \\
+Graf-koheziona heuristika uvedena je kao alternativa centroidnoj dodeli. Umesto pitanja \texttt{Da li je ovaj čvor blizu centroida klastera?}, ona postavlja pitanje: \texttt{Da li je ovaj čvor sličan postojećim članovima ovog klastera?}. Ova heuristika je korisna zato što smanjuje direktnu zavisnost od centroida i može da predstavi koheziju klastera na način koji je manje sličan KMeans-u.
+
+Za svaki kandidatski klaster heuristika uzorkuje već dodeljene članove tog klastera i računa prosečnu udaljenost u prostoru osobina između njih i trenutnog čvora. Manja prosečna udaljenost daje veći skor.
+
+Da bi se izbeglo nestabilno ponašanje dok su klasteri još premali, heuristika koristi klaster samo ako već ima više od minimalnog broja dodeljenih članova. U trenutnom kodu taj prag je 15 članova, a najveća veličina uzorka je 40.
+
+\subsection{Trenutno stanje ovog dela koda}
+Ovaj modul sadrži najeksperimentalniji deo projekta. U njemu je više strategija konstrukcije i heuristika uvedenih tokom testiranja različitih načina da se prevaziđe jednostavno centroidno klasterovanje.
+
+Postoje dva izbora koja su namerna i treba ih dokumentovati, a ne tretirati kao greške.
+\begin{enumerate}
+  \item Graf-lokalna heuristika uključuje centroidni rezervni signal. To je dodato zato što su na početku konstrukcije mnogi prostorni susedi još nedodeljeni. U takvoj situaciji čisto grafovski skor ima malo informacija. Centroidna rezerva daje heuristici slab signal zasnovan na osobinama dok ne bude dostupno dovoljno susednih oznaka.
+  \item Multi-colony strategija uključuje mali mehanizam mutacije. Cilj mutacije nije da cilja jednu konkretnu koloniju, već samo da utiče na mali podskup mrava. Time se zadržava izvesno istraživanje u procesu pretrage, bez randomizacije svih mrava ili svih kolonija. U trenutnoj implementaciji parametri mutacije su hardkodovani, ali se kasnije mogu učiniti podesivim.
+\end{enumerate}
+
+U celini, modul za konstrukciju i heuristike treba posmatrati kao eksperimentalni deo metode. On sadrži glavne alternative koje su testirane: centroidnu konstrukciju, graf-lokalnu konstrukciju, kohezionu konstrukciju, rafinisanje i multi-colony konstrukciju. Konačni eksperimenti određuju koje od ovih varijanti treba zadržati u završnom poređenju.
 
 \section{Metodologija validacije}
 \label{sec:validation}
 
-Interna mera kvaliteta je funkcija cilja koju algoritam optimizuje. Pošto je direktno optimizovana, ona nije dovoljna kao nezavisna provera smislenosti regionalizacije. Zbog toga je uvedena eksterna ekološka validacija zasnovana na CORINE Land Cover podacima.
+\subsection{Interna mera optimizacije}
+Optimizacioni proces vodi funkcija cilja definisana u odeljku 3. Fitness vrednost se za svaki eksperiment prijavljuje kao interna mera optimizacije. Pošto algoritam direktno optimizuje funkciju cilja, ona nije dovoljna kao nezavisni kriterijum evaluacije.
 
-Prirodna vegetacija je snažno povezana sa dugoročnim klimatskim uslovima. Poljoprivredne površine takođe zavise od klime, ali i od ljudskog upravljanja, pa se ocenjuju odvojeno. Veštačke površine uglavnom zavise od ljudskih aktivnosti i izuzete su iz konačnog ekološkog skora, mada se njihov udeo izveštava kao dodatna informacija.
+\subsection{Spoljašnja validacija zasnovana na vegetaciji}
+\subsubsection{Motivacija}
+Različiti klimatski uslovi povezani su sa različitim tipovima zemljišnog pokrivača. Šume, žbunasta vegetacija, travnjaci i drugi prirodni tipovi zemljišnog pokrivača razvijaju se pod različitim klimatskim uslovima. Zato dosledno razdvajanje zemljišnog pokrivača unutar klimatskih regiona može ukazivati na to da dobijena regionalizacija hvata bar deo osnovne klimatske varijabilnosti. Ovaj odeljak opisuje predloženu meru konzistentnosti vegetacije, zajedno sa skupom podataka korišćenim za njeno računanje.
 
-Za svaku klimatsku regiju računaju se homogenost poljoprivrednih i prirodnih klasa pomoću normalizovane Shannonove entropije. Ako je $H^{norm}$ normalizovana entropija, homogenost je $1-H^{norm}$. Kombinovani skor klastera je ponderisana suma poljoprivredne i prirodne homogenosti, pri čemu su ponderi određeni udelom tih tipova zemljišta u klasteru. Ukupna ekološka konzistentnost je površinski ponderisan prosek po klasterima.
+\subsubsection{Kategorizacija zemljišnog pokrivača prema uticaju klime}
+Prirodna vegetacija razvija se pod dugoročnim klimatskim uslovima. Očekuje se da oblasti sa sličnom klimom imaju sličnu prirodnu vegetaciju.
 
-Pored toga, koristi se Adjusted Rand Index (ARI) za poređenje ACO rešenja sa KMeans baznom regionalizacijom. ARI nije mera kvaliteta, već dijagnostika sličnosti sa centroidnim klasterovanjem.
+Poljoprivredne površine su drugačije. Klima je i dalje važan faktor, ali na zemljišni pokrivač utiču i upravljanje zemljištem, poljoprivredne prakse i ekonomske odluke. Zbog toga poljoprivredne površine ne treba tretirati isto kao prirodnu vegetaciju.
 
-Köppen-Geigerov raster je uzorkovan za validne klimatske ćelije. U notebook-u \texttt{koppen\_eval.ipynb} Köppen oznake se zatim agregiraju na optimizacione čvorove većinskim glasanjem, što omogućava evaluaciju Köppen regionalizacije istim metrikama kao i ACO rešenja.
+Veštačke površine su još manje pogodne za klimatsku validaciju. Urbani razvoj i infrastruktura uglavnom zavise od ljudskih odluka. Zato pružaju malo informacija o klimatskoj regionalizaciji.
+
+Iz tih razloga predložena metoda validacije odvojeno ocenjuje poljoprivredne i prirodne površine. Veštačke površine se isključuju iz konačnog skora.
+
+Ovaj pristup omogućava da se svaki klimatski region ocenjuje pomoću tipova zemljišnog pokrivača koji su najinformativniji za taj deo pejzaža.
+
+\subsubsection{CORINE Land Cover skup podataka}
+Spoljašnja validacija zasnovana je na CORINE Land Cover (CLC) 2018 skupu podataka, koji proizvodi Copernicus Land Monitoring Service \cite{copernicusCLC2018,clcManual2021}.
+
+U ovom radu korišćena je rasterska verzija prostorne rezolucije 100 m. Svaka rasterska ćelija pripada jednoj od zvaničnih CLC klasa zemljišnog pokrivača. Skup podataka pokriva celu teritoriju Srbije i reprojektovan je tako da odgovara koordinatnom referentnom sistemu klimatskog skupa podataka.
+
+Skup podataka o vegetaciji potpuno je nezavisan od klimatskih promenljivih korišćenih tokom klasterovanja. Zato je pogodan za procenu da li dobijeni klimatski regioni odgovaraju smislenim regionima životne sredine.
+
+Originalni CLC skup podataka sadrži mnogo detaljnih klasa zemljišnog pokrivača. Za potrebe validacije te klase su grupisane u šire kategorije.
+
+Korišćene su sledeće prirodne kategorije:
+\begin{itemize}
+  \item širokolisna šuma
+  \item četinarska šuma
+  \item mešovita šuma
+  \item žbunasta vegetacija
+  \item travnjaci i ogoljeno zemljište
+  \item močvare
+  \item vode
+\end{itemize}
+
+Oblasti koje pripadaju poljoprivrednim klasama zadržane su kao posebna kategorija. Za razliku od prirodne vegetacije, poljoprivredno zemljište je snažno pod uticajem ljudskog upravljanja. Ipak, različite klase poljoprivrednog zemljišnog pokrivača i dalje daju korisne informacije o klimatskoj pogodnosti.
+
+Veštačke površine su takođe izdvojene posebno. One uglavnom predstavljaju gradove, puteve i drugu izgrađenu infrastrukturu. Njihov prostorni raspored određen je uglavnom ljudskom aktivnošću, a ne klimom. Zato se veštačke površine isključuju iz skora konzistentnosti vegetacije. Njihov udeo se ipak prijavljuje kao dodatna informacija.
+
+\subsubsection{Konzistentnost vegetacije poljoprivrednih površina}
+Shannonova entropija izabrana je za merenje konzistentnosti oblasti zato što meri raznovrsnost klasa zemljišnog pokrivača unutar klimatskog regiona. Niža entropija ukazuje na to da većina piksela pripada malom broju klasa zemljišnog pokrivača, dok viša entropija ukazuje na heterogeniji region.
+
+Za svaki klimatski region biraju se samo pikseli klasifikovani kao poljoprivredno zemljište. Računa se relativni udeo svake klase poljoprivrednog zemljišnog pokrivača. Neka $p_i$ označava udeo poljoprivredne klase $i$, pri čemu važi
+\[
+\sum_{i=1}^{m} p_i = 1.
+\]
+
+Shannonova entropija je
+\[
+H_A=-\sum_{i=1}^{m} p_i \log(p_i).
+\]
+Pošto različiti klasteri mogu sadržati različit broj poljoprivrednih klasa, entropija se normalizuje.
+\[
+H_A^{\mathrm{norm}}
+=
+\frac{H_A}{\log(m)}.
+\]
+Poljoprivredna konzistentnost se zatim definiše kao
+\[
+G_A
+=
+1-H_A^{\mathrm{norm}}.
+\]
+Vrednost $G_A$ je između 0 i 1. Vrednost bliska 1 ukazuje na to da većina poljoprivrednog zemljišta pripada samo malom broju klasa zemljišnog pokrivača. To znači da su poljoprivredne površine unutar klimatskog regiona relativno homogene. Niže vrednosti ukazuju na raznovrsniju poljoprivrednu strukturu.
+
+\subsubsection{Konzistentnost vegetacije prirodnog zemljišta}
+Isti postupak primenjuje se na prirodni zemljišni pokrivač. Razmatraju se samo sledeće grupe:
+\begin{itemize}
+  \item širokolisna šuma
+  \item četinarska šuma
+  \item mešovita šuma
+  \item žbunasta vegetacija
+  \item travnjaci i ogoljeno zemljište
+  \item močvare
+  \item vode
+\end{itemize}
+Neka $q_i$ bude udeo prirodne klase zemljišnog pokrivača $i$. Shannonova entropija je
+\[
+H_N=-\sum_{i=1}^{n} q_i \log(q_i).
+\]
+Normalizovana entropija je
+\[
+H_N^{\mathrm{norm}}
+=
+\frac{H_N}{\log(n)}.
+\]
+Konzistentnost prirodnog zemljišta je
+\[
+G_N
+=
+1-H_N^{\mathrm{norm}}.
+\]
+I ovde vrednosti bliže 1 ukazuju na homogeniju prirodnu vegetaciju unutar klimatskog regiona.
+
+\subsubsection{Kombinovana konzistentnost vegetacije}
+Svaki klimatski region sadrži različite udele poljoprivrednog i prirodnog zemljišta. Neka je $A_k$ broj poljoprivrednih piksela u klasteru $k$, a $N_k$ broj prirodnih piksela. Veštački pikseli se ne uključuju. Relativni doprinos poljoprivrede je
+\[
+w_A
+=
+\frac{A_k}{A_k+N_k}.
+\]
+Doprinos prirodnog zemljišta je
+\[
+w_N
+=
+\frac{N_k}{A_k+N_k}.
+\]
+Konzistentnost vegetacije klastera $k$ definiše se kao
+\[
+E_k
+=
+w_A G_A
++
+w_N G_N.
+\]
+Ovaj skor se automatski prilagođava sastavu zemljišnog pokrivača svakog klimatskog regiona. Zato se metrika može dosledno primeniti na regione u kojima dominira poljoprivredno ili prirodno zemljište, bez favorizovanja jednog tipa zemljišta nad drugim. Klasteri u kojima dominira poljoprivreda ocenjuju se uglavnom pomoću poljoprivredne konzistentnosti. Klasteri u kojima dominira prirodna vegetacija ocenjuju se uglavnom pomoću konzistentnosti prirodne vegetacije.
+
+\subsubsection{Ukupna konzistentnost vegetacije}
+Konačni skor se računa kao površinski ponderisan prosek svih klimatskih regiona. Neka je $n_k=A_k+N_k$ broj evaluiranih piksela u klasteru $k$. Težina klastera je
+\[
+\omega_k
+=
+\frac{n_k}
+{\sum_{j=1}^{K} n_j}.
+\]
+Konačni skor konzistentnosti vegetacije je
+\[
+E
+=
+\sum_{k=1}^{K}
+\omega_k E_k.
+\]
+Veće vrednosti znače da su klimatski regioni ekološki konzistentniji.
+
+\subsection{Analiza sličnosti}
+Skor konzistentnosti vegetacije ocenjuje koliko se klimatski regioni poklapaju sa nezavisnim informacijama o zemljišnom pokrivaču. Drugo pitanje je da li predloženi algoritmi klasterovanja proizvode rešenja slična klasičnim centroidnim metodama klasterovanja. Ako je dobijeno klasterovanje veoma slično KMeans rešenju, dodatna složenost ACO okvira možda ne donosi značajnu praktičnu korist. U tu svrhu koristi se Adjusted Rand Index (ARI) \cite{hubert1985}.
+
+ARI poredi dve različite particije istog skupa podataka. U ovom radu jednu particiju proizvodi predloženi algoritam kolonije mrava, a drugu proizvodi KMeans algoritam.
+
+Za razliku od skora konzistentnosti vegetacije, ARI se ne koristi kao mera kvaliteta. Viši ARI ne znači nužno bolju klimatsku regionalizaciju. Umesto toga, on meri koliko je dobijeno klasterovanje slično KMeans rešenju.
+
+ARI je definisan kao
+\[
+ARI=
+\frac{RI-E(RI)}
+{\max(RI)-E(RI)},
+\]
+gde je $RI$ Randov indeks, a $E(RI)$ njegova očekivana vrednost za dva slučajna klasterovanja.
+
+ARI uzima vrednosti između -1 i 1. Vrednost ARI od 1 znači da su dva klasterovanja identična. Vrednost bliska 0 ukazuje na slaganje slično onome koje bi se očekivalo slučajno. Negativne vrednosti ukazuju na manje slaganje od očekivanog slučajem.
+
+U ovom radu ARI se koristi samo da opiše koliko se predloženi algoritmi razlikuju od KMeans-a. To pomaže da se utvrdi da li dodatne heuristike proizvode zaista drugačije klimatske regione ili samo reprodukuju centroidno rešenje.
+
+\subsubsection{Köppen-Geigerova klimatska klasifikacija}
+
+Köppen-Geigerova klimatska klasifikacija služi kao referentna klimatska regionalizacija sa kojom se porede dobijena rešenja.
+
+Köppen-Geigerov raster visoke rezolucije za klimatološki normalni period 1991--2020 preuzet je iz projekta Global Hydro-Environmental Observatory (GloH2O) \cite{beck2018}. Raster ima prostornu rezoluciju od približno 1 km i sadrži jednu Köppenovu klimatsku klasu za svaku rastersku ćeliju.
+
+Pošto tok klasterovanja radi nad tabelom \texttt{df\_valid.csv}, Köppenov raster je uzorkovan za svaku validnu klimatsku ćeliju pomoću njenih geografskih koordinata. Dobijena Köppenova klasa sačuvana je zajedno sa prostornim koordinatama.
+
+Kasnije u projektu ove Köppenove oznake agregiraju se na optimizacione čvorove većinskim glasanjem. To omogućava da se Köppenova regionalizacija evaluira potpuno istim merama kvaliteta kao i algoritmi klasterovanja. Originalni raster je nad Srbijom sadržao šest Köppenovih klasa. Posle agregacije na optimizacione čvorove ostalo je pet klasa, zato što jedna klasa nikada nije postala dominantna klasa unutar nekog čvora. Zato je unapred definisani broj klastera u ovim ACO implementacijama 5.
 
 \section{Rezultati i diskusija}
 \label{sec:results}
+Ovaj odeljak prikazuje rezultate eksperimenata i zaključke koji iz njih slede. Eksperimentalna evaluacija ima dva dela. Glavni eksperiment testira veliki broj kombinacija algoritama, parametara, funkcija cilja i reprezentacija osobina. On se koristi za pronalaženje opštih obrazaca i obećavajućih konfiguracija. Manja višestruka validacija zatim ponovo pokreće izabrane konfiguracije sa više seed-ova. Ona proverava da li su najjači rezultati stabilni.
 
-Sistematski eksperimenti obuhvataju 252 seed-prosečene konfiguracije, odnosno 504 pojedinačna pokretanja sa dve slučajne inicijalizacije. Korišćeno je 5 klastera, 15 mrava, 20 iteracija, vrednosti $\alpha \in \{0.75,1,2\}$, $\beta \in \{1,3\}$, evaporacije $0.02$ i $0.10$, kao i $q=0.05$.
+Najpre se predložene metode porede sa referentnim regionalizacijama. Zatim se glavni eksperiment sažima kroz funkcije cilja i reprezentacije osobina. Nakon toga se razmatraju rezultati na nivou parametara i višestruka validacija. Na kraju se najbolja rešenja porede vizuelno.
 
-Referentni KMeans rezultat ima fitness 0.2376 i ponderisanu ekološku konzistentnost 0.4744. Köppen-Geigerova regionalizacija ima fitness 0.3679 i ekološku konzistentnost 0.4426. KMeans očekivano ima bolji fitness jer direktno optimizuje klimatske osobine, dok Köppen koristi fiksna pravila.
+Svi testirani algoritmi sadrže stohastičke komponente, uključujući slučajan redosled obilaska čvorova i probabilističku dodelu čvorova. Da bi se smanjio uticaj slučajnosti, svaka konfiguracija parametara u glavnom eksperimentu izvršena je 2 puta sa različitim slučajnim seed-ovima. Prijavljeni rezultati zasnovani su na srednjim vrednostima.
 
-Ukupne statistike seed-prosečenih konfiguracija pokazuju da se fitness kreće od 0.2325 do 0.9307, sa prosekom 0.4613. Ponderisana ekološka konzistentnost kreće se od 0.3946 do 0.4846, sa prosekom 0.4448. Fitness je mnogo osetljiviji na izbor strategije nego ekološka konzistentnost.
+\subsection{Referentne regionalizacije}
+Pre analize predloženih algoritama korisno je pogledati dve referentne regionalizacije. One će služiti kao osnovna rešenja u ostatku ovog poglavlja.
+
+Prva referenca je KMeans klasterovanje. KMeans je verovatno najčešći algoritam klasterovanja i grupiše lokacije samo na osnovu sličnosti njihovih klimatskih promenljivih. Ne koristi prostorne informacije niti informacije o vegetaciji.
+
+Druga referenca je Köppen-Geigerova klimatska klasifikacija. Za razliku od KMeans-a, Köppen nije algoritam klasterovanja. To je klimatska klasifikacija zasnovana na pravilima, koja svaku lokaciju dodeljuje klimatskoj klasi pomoću unapred definisanih pragova temperature i padavina \cite{koppen1936,peel2007}. Pošto se široko koristi, predstavlja prirodnu referencu za poređenje \cite{peel2007,beck2018}.
+
+Da bi se sve metode fer poredile, i KMeans i Köppen evaluirani su istim metrikama kao predloženi algoritmi. Ovo referentno poređenje koristi Köppen-inspirisanu reprezentaciju osobina. Za Köppen je originalni raster najpre pretvoren u optimizacione čvorove većinskim glasanjem. Dobijene oznake su zatim evaluirane na isti način kao svako rešenje klasterovanja. Tabela~\ref{tab:reference_results} prikazuje dobijene rezultate.
+
+% TODO: Ažurirati tabelu referentnih regionalizacija tako da uključi alternativne funkcije cilja, ili jasno navesti koja funkcija cilja se ovde koristi.
 
 \begin{table}[ht]
 \centering
-\caption{Prosečni rezultati po algoritamskim varijantama.}
-\begin{tabular}{lcc}
+\caption{Referentne regionalizacije.}
+\label{tab:reference_results}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccc}
 \hline
-Algoritam & Fitness & Ponderisana ekološka konzistentnost \\
+\textbf{Metod} & \textbf{Centroidni fitness} & \textbf{Silhouette fitness} & \textbf{SNN fitness} & \textbf{Metrika vegetacije} \\
 \hline
-ACO Centroid & 0.2701 & 0.4700 \\
-ACO Centroid + Refinement & 0.3141 & 0.4683 \\
-Multi-colony Centroid Graph Spatial & 0.3577 & 0.4535 \\
-ACO Graph Local & 0.5201 & 0.4344 \\
-Multi-colony Cohesion Graph Spatial & 0.5643 & 0.4314 \\
-ACO Cohesion + Refinement & 0.5985 & 0.4294 \\
-ACO Cohesion & 0.6046 & 0.4265 \\
+KMeans & 0.2376 & 0.3225 & 0.1651 & 0.4744 \\
+Köppen-Geiger & 0.3679 & 0.4149 & 0.1062 & 0.4426 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+KMeans ima bolji centroidni i silhouette fitness od Köppena. To je očekivano zato što KMeans direktno optimizuje sličnost klimatskih podataka, dok Köppen prati fiksan skup pravila. Köppen ima bolji SNN fitness od KMeans-a. To znači da Köppenovi regioni zasnovani na pravilima bolje čuvaju lokalnu susedsku sličnost prema ovom grafovskom cilju.
+
+Vrednosti metrike vegetacije su bliže. KMeans je i dalje bolji, ali i Köppen postiže razumno dobar skor. To nije iznenađujuće zato što je prvobitni cilj Köppenove klasifikacije bio da klimatski regioni približno odgovaraju rasporedu prirodne vegetacije \cite{koppen1936,peel2007}.
+
+Ove dve metode koristiće se kao referentne tačke pri analizi predloženih algoritama optimizacije kolonijom mrava u narednim odeljcima.
+
+\subsection{Glavni eksperiment kroz funkcije cilja i reprezentacije osobina}
+
+Glavni eksperiment je pokrenut za tri funkcije cilja i tri reprezentacije osobina. Svaka funkcija cilja testirana je na istoj mreži parametara. Fitness vrednosti se prijavljuju odvojeno za svaki cilj. Ne treba ih porediti kao da imaju isto značenje.
+
+\begin{table}[ht]
+\centering
+\caption{Sažetak glavnog eksperimenta za centroidnu funkciju cilja.}
+\label{tab:stage1_centroid_fitness_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Skup osobina} & \textbf{Min. fitness} & \textbf{Srednji fitness} & \textbf{Std. fitness-a} & \textbf{Najbolja metrika vegetacije} & \textbf{Srednja metrika vegetacije} & \textbf{Std. metrike vegetacije} \\
+\hline
+Köppen-inspirisane & 0.2325 & 0.4613 & 0.2391 & 0.4846 & 0.4448 & 0.0264 \\
+Sirove klimatske promenljive & 0.2332 & 0.4843 & 0.2404 & 0.4831 & 0.4413 & 0.0258 \\
+PCA osobine & 0.3037 & 0.6306 & 0.2206 & 0.4671 & 0.4294 & 0.0237 \\
+Ukupno & 0.2325 & 0.5254 & 0.2450 & 0.4846 & 0.4385 & 0.0261 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Sažetak glavnog eksperimenta za silhouette funkciju cilja.}
+\label{tab:stage1_silhouette_fitness_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Skup osobina} & \textbf{Min. fitness} & \textbf{Srednji fitness} & \textbf{Std. fitness-a} & \textbf{Najbolja metrika vegetacije} & \textbf{Srednja metrika vegetacije} & \textbf{Std. metrike vegetacije} \\
+\hline
+Köppen-inspirisane & 0.2672 & 0.4141 & 0.1100 & 0.4831 & 0.4387 & 0.0254 \\
+Sirove klimatske promenljive & 0.2614 & 0.4173 & 0.1151 & 0.4800 & 0.4368 & 0.0250 \\
+PCA osobine & 0.2629 & 0.4450 & 0.1230 & 0.4682 & 0.4261 & 0.0231 \\
+Ukupno & 0.2614 & 0.4255 & 0.1169 & 0.4831 & 0.4339 & 0.0251 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Sažetak glavnog eksperimenta za SNN funkciju cilja.}
+\label{tab:stage1_snn_fitness_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Skup osobina} & \textbf{Min. fitness} & \textbf{Srednji fitness} & \textbf{Std. fitness-a} & \textbf{Najbolja metrika vegetacije} & \textbf{Srednja metrika vegetacije} & \textbf{Std. metrike vegetacije} \\
+\hline
+Köppen-inspirisane & 0.0830 & 0.3490 & 0.2223 & 0.4840 & 0.4406 & 0.0246 \\
+Sirove klimatske promenljive & 0.0960 & 0.3678 & 0.2231 & 0.4821 & 0.4376 & 0.0242 \\
+PCA osobine & 0.0723 & 0.4266 & 0.2482 & 0.4707 & 0.4266 & 0.0228 \\
+Ukupno & 0.0723 & 0.3812 & 0.2336 & 0.4840 & 0.4350 & 0.0246 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+Vrednosti metrike vegetacije variraju u uskom opsegu. Zato razlike u toj metrici treba tumačiti oprezno. One su korisne za poređenje rešenja, ali ne treba ih posmatrati kao velike apsolutne razlike.
+
+Iste konfiguracije parametara uparene su kroz tri optimizaciona cilja. Dobijeno je 756 uparenih konfiguracija. Tabela~\ref{tab:stage1_fitness_objective_correlation} pokazuje da li iste konfiguracije imaju slične rezultate pod različitim ciljevima.
+
+\begin{table}[ht]
+\centering
+\caption{Korelacija između uparenih vrednosti funkcija cilja.}
+\label{tab:stage1_fitness_objective_correlation}
+\begin{tabular}{lccc}
+\hline
+\multicolumn{4}{c}{\textbf{Pearsonova korelacija}} \\
+\hline
+\textbf{Cilj} & \textbf{Centroid} & \textbf{Silhouette} & \textbf{SNN} \\
+\hline
+Centroid & 1.000 & 0.951 & 0.953 \\
+Silhouette & 0.951 & 1.000 & 0.980 \\
+SNN & 0.953 & 0.980 & 1.000 \\
+\hline
+\multicolumn{4}{c}{\textbf{Spearmanova korelacija}} \\
+\hline
+\textbf{Cilj} & \textbf{Centroid} & \textbf{Silhouette} & \textbf{SNN} \\
+\hline
+Centroid & 1.000 & 0.906 & 0.901 \\
+Silhouette & 0.906 & 1.000 & 0.967 \\
+SNN & 0.901 & 0.967 & 1.000 \\
 \hline
 \end{tabular}
 \end{table}
 
-Centroidne metode postižu najbolje rezultate. Dodavanje rafinisanja blago povećava fitness, dok ekološka konzistentnost ostaje slična. Graf i kohezioni pristupi daju znatno slabije rezultate. Od ažuriranja feromona, \textit{all-ants} strategija ima najniži prosečni fitness i najvišu prosečnu ekološku konzistentnost, dok su \textit{best-ant} i \textit{quality-weighted} veoma bliske.
+Aktivna fitness vrednost je takođe upoređena sa metrikom vegetacije unutar svake grupe ciljeva. Niži fitness je bolji, dok su više vrednosti metrike vegetacije bolje. Negativne korelacije zato ukazuju na slaganje između optimizacionog cilja i metrike vegetacije.
 
-Parametar $\beta$ ima najjači uticaj: $\beta=3$ daje znatno bolji prosečni fitness i ekološku konzistentnost od $\beta=1$. Parametar $\alpha$ i evaporacija imaju slabiji uticaj. Među 25 najboljih konfiguracija po ekološkoj konzistentnosti nalaze se samo centroidne i centroidno-rafinisane varijante. Među 25 najboljih po fitness-u dominiraju iste varijante, uz jednu kohezionu varijantu sa rafinisanjem.
+\begin{table}[ht]
+\centering
+\caption{Pearsonova korelacija između aktivnog fitness-a i metrike vegetacije.}
+\label{tab:stage1_fitness_ecology_pearson}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Funkcija cilja} & \textbf{Köppen-inspirisane} & \textbf{Sirove} & \textbf{PCA} & \textbf{Ukupno} \\
+\hline
+Centroid & -0.962 & -0.974 & -0.972 & -0.970 \\
+Silhouette & -0.828 & -0.916 & -0.928 & -0.886 \\
+SNN & -0.846 & -0.903 & -0.870 & -0.870 \\
+\hline
+\end{tabular}
+\end{table}
 
-Najbolja seed-prosečena konfiguracija po fitness-u je ACO Centroid sa \textit{best-ant} ažuriranjem, $\alpha=1$, $\beta=3$ i evaporacijom 0.10; njen fitness je 0.2325, ponderisana ekološka konzistentnost 0.4754, a ARI prema KMeans 0.5431. Najbolja seed-prosečena konfiguracija po ekološkoj konzistentnosti je ACO Centroid + Refinement sa \textit{all-ants} ažuriranjem, $\alpha=0.75$, $\beta=1$ i evaporacijom 0.10; njen fitness je 0.2633, ekološka konzistentnost 0.4846, a ARI 0.6211.
+\begin{table}[ht]
+\centering
+\caption{Spearmanova korelacija između aktivnog fitness-a i metrike vegetacije.}
+\label{tab:stage1_fitness_ecology_spearman}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Funkcija cilja} & \textbf{Köppen-inspirisane} & \textbf{Sirove} & \textbf{PCA} & \textbf{Ukupno} \\
+\hline
+Centroid & -0.905 & -0.944 & -0.966 & -0.949 \\
+Silhouette & -0.677 & -0.838 & -0.926 & -0.819 \\
+SNN & -0.663 & -0.782 & -0.865 & -0.781 \\
+\hline
+\end{tabular}
+\end{table}
+
+Prethodne tabele prikazuju korelacije na celom skupu konfiguracija. Međutim, kasnija analiza se obično fokusira na manji skup najboljih konfiguracija. Zato je ista korelacija računata ponovljeno nad najboljih $N$ konfiguracija.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../experiments/results/stage1_topn_analysis/topn_corr_fitness_ecology_combined.png}
+    \caption{Top-N korelacija između aktivnog fitness-a i metrike vegetacije. Svaki panel rangira konfiguracije prema jednoj aktivnoj funkciji cilja. Niži fitness je bolji, a više vrednosti metrike vegetacije su bolje. Negativne vrednosti ukazuju na slaganje.}
+    \label{fig:topn_fitness_ecology_correlation}
+\end{figure}
+
+Da je veza stabilna kroz rang listu, očekivalo bi se da se Top-N korelacija stabilizuje oko vrednosti za ceo skup već pri manjim veličinama uzorka. Slika~\ref{fig:topn_fitness_ecology_correlation} pokazuje drugačiji obrazac. Za sve tri funkcije cilja korelacija se približava vrednosti za ceo skup tek kada se uključi veliki deo konfiguracija. Za centroidni fitness to se dešava posle oko 500 od 756 konfiguracija. Za silhouette i SNN fitness isti obrazac je još jasniji. Najizraženiji je za SNN funkciju cilja. Za male vrednosti $N$, SNN korelacija je slaba ili pozitivna. To znači da konfiguracije sa najboljim SNN fitness-om nisu nužno konfiguracije sa najboljom metrikom vegetacije.
+
+Ista provera sa obrnutim rangiranjem daje suprotan pogled. Korelacija se brže približava vrednosti za ceo skup kada se konfiguracije dodaju od najlošijeg kraja. Za sve tri funkcije cilja potrebno je samo oko 100--200 konfiguracija. To je u skladu sa idejom da globalnu korelaciju uglavnom pokreće razdvajanje između slabih i prihvatljivih konfiguracija.
+
+Isti obrazac je proveren i preko standardne devijacije. Sve tri funkcije cilja prate isti opšti obrazac. Slika~\ref{fig:topn_snn_variation_comparison} prikazuje slučaj SNN-a, gde je efekat najjači. Kriva aktivnog fitness-a ne tumači se kao poseban rezultat. Njen oblik je očekivan zato što su konfiguracije sortirane po toj istoj metrici. Uključena je samo kao referentna kriva. Cilj je da se vidi da li metrika vegetacije prati isti obrazac. Ova provera ne poredi sirove skale metrika. Obe metrike su min-max normalizovane.
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\textwidth]{regionalization_comparison.png}
-    \caption{Poređenje najbolje konfiguracije po fitness-u, najbolje konfiguracije po ponderisanoj ekološkoj konzistentnosti, KMeans klasterovanja i Köppen-Geigerove klasifikacije.}
+    \includegraphics[width=\textwidth]{../experiments/results/stage1_topn_analysis/topn_std_snn_ranking_comparison.png}
+    \caption{Top-N standardna devijacija za konfiguracije rangirane po SNN-u. Levi panel dodaje konfiguracije od najboljeg ka najlošijem SNN fitness-u. Desni panel dodaje konfiguracije od najlošijeg ka najboljem SNN fitness-u. Vrednosti su izračunate nakon min-max normalizacije unutar skupa SNN eksperimenata.}
+    \label{fig:topn_snn_variation_comparison}
 \end{figure}
+
+U najbolje rangiranom podskupu varijacija metrike vegetacije mnogo je veća od varijacije aktivnog fitness-a, u odnosu na njen ukupni opseg. To znači da konfiguracije sa veoma sličnim SNN fitness-om ipak mogu primetno da se razlikuju u metrici vegetacije. U obrnutom rangiranju dve krive se kreću sličnije. To sugeriše da SNN fitness doslednije prepoznaje slabe konfiguracije nego što rangira najjače konfiguracije prema kvalitetu vegetacije.
+
+\begin{table}[ht]
+\centering
+\caption{Pet najboljih konfiguracija prema centroidnoj funkciji cilja.}
+\label{tab:stage1_top5_centroid_fitness}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllcccccc}
+\hline
+\textbf{Skup osobina} & \textbf{Algoritam} & \textbf{Ažuriranje} & \textbf{$\alpha$} & \textbf{$\beta$} & \textbf{Evap.} & \textbf{$q$} & \textbf{Fitness} & \textbf{Metrika vegetacije} \\
+\hline
+Köppen-inspirisane & ACO Centroid & Best ant & 1.00 & 3.00 & 0.10 & 0.05 & 0.2325 & 0.4754 \\
+Sirove & ACO Centroid & Best ant & 1.00 & 3.00 & 0.10 & 0.05 & 0.2332 & 0.4704 \\
+Sirove & ACO Centroid & Best ant & 0.75 & 3.00 & 0.10 & 0.05 & 0.2332 & 0.4620 \\
+Köppen-inspirisane & ACO Centroid & Best ant & 1.00 & 3.00 & 0.02 & 0.05 & 0.2333 & 0.4709 \\
+Köppen-inspirisane & ACO Centroid & Best ant & 0.75 & 3.00 & 0.02 & 0.05 & 0.2341 & 0.4706 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Pet najboljih konfiguracija prema silhouette funkciji cilja.}
+\label{tab:stage1_top5_silhouette_fitness}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllcccccc}
+\hline
+\textbf{Skup osobina} & \textbf{Algoritam} & \textbf{Ažuriranje} & \textbf{$\alpha$} & \textbf{$\beta$} & \textbf{Evap.} & \textbf{$q$} & \textbf{Fitness} & \textbf{Metrika vegetacije} \\
+\hline
+Sirove & ACO Centroid & Quality weighted & 2.00 & 3.00 & 0.02 & 0.05 & 0.2614 & 0.4564 \\
+PCA & ACO Centroid & Quality weighted & 2.00 & 3.00 & 0.10 & 0.05 & 0.2629 & 0.4542 \\
+PCA & ACO Centroid & Quality weighted & 2.00 & 3.00 & 0.02 & 0.05 & 0.2652 & 0.4506 \\
+PCA & ACO Centroid & All ants & 0.75 & 3.00 & 0.02 & 0.05 & 0.2657 & 0.4554 \\
+PCA & ACO Centroid & Best ant & 1.00 & 3.00 & 0.02 & 0.05 & 0.2665 & 0.4577 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Pet najboljih konfiguracija prema SNN funkciji cilja.}
+\label{tab:stage1_top5_snn_fitness}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllcccccc}
+\hline
+\textbf{Skup osobina} & \textbf{Algoritam} & \textbf{Ažuriranje} & \textbf{$\alpha$} & \textbf{$\beta$} & \textbf{Evap.} & \textbf{$q$} & \textbf{Fitness} & \textbf{Metrika vegetacije} \\
+\hline
+PCA & Multi-colony Cohesion Graph Spatial & All ants & 1.00 & 3.00 & 0.02 & 0.05 & 0.0723 & 0.4277 \\
+Köppen-inspirisane & Multi-colony Centroid Graph Spatial & All ants & 2.00 & 3.00 & 0.10 & 0.05 & 0.0830 & 0.4218 \\
+Köppen-inspirisane & Multi-colony Centroid Graph Spatial & All ants & 2.00 & 3.00 & 0.02 & 0.05 & 0.0845 & 0.4235 \\
+PCA & ACO Graph Local & All ants & 1.00 & 3.00 & 0.02 & 0.05 & 0.0869 & 0.4105 \\
+PCA & Multi-colony Centroid Graph Spatial & All ants & 2.00 & 3.00 & 0.10 & 0.05 & 0.0924 & 0.4231 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Pet najboljih konfiguracija prema metrici vegetacije.}
+\label{tab:stage1_top5_ecology}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llllcccccc}
+\hline
+\textbf{Fitness} & \textbf{Skup osobina} & \textbf{Algoritam} & \textbf{Ažuriranje} & \textbf{$\alpha$} & \textbf{$\beta$} & \textbf{Evap.} & \textbf{$q$} & \textbf{Aktivni fitness} & \textbf{Metrika vegetacije} \\
+\hline
+Centroid & Köppen-inspirisane & ACO Centroid + Refinement & All ants & 0.75 & 1.00 & 0.10 & 0.05 & 0.2633 & 0.4846 \\
+SNN & Köppen-inspirisane & ACO Centroid + Refinement & All ants & 0.75 & 1.00 & 0.02 & 0.05 & 0.2082 & 0.4840 \\
+Centroid & Köppen-inspirisane & ACO Centroid + Refinement & All ants & 0.75 & 1.00 & 0.02 & 0.05 & 0.2729 & 0.4835 \\
+Centroid & Köppen-inspirisane & ACO Centroid & All ants & 1.00 & 3.00 & 0.10 & 0.05 & 0.2455 & 0.4835 \\
+Centroid & Sirove & ACO Centroid & All ants & 1.00 & 1.00 & 0.10 & 0.05 & 0.2611 & 0.4831 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Presek Top-50 rangiranja prema aktivnom fitness-u i Top-50 rangiranja prema metrici vegetacije unutar svake grupe funkcije cilja.}
+\label{tab:stage1_top50_overlap_within_fitness}
+\begin{tabular}{lc}
+\hline
+\textbf{Fitness rangiranje} & \textbf{Presek sa Top-50 metrikom vegetacije} \\
+\hline
+Centroid & 18 / 50 \\
+Silhouette & 0 / 50 \\
+SNN & 1 / 50 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Uticaj ne-centroidnih funkcija cilja}
+
+Jedna briga bila je da centroidna funkcija cilja može favorizovati centroidne strategije konstrukcije. Da bi se to proverilo, eksperimenti su ponovljeni sa još dve funkcije cilja. Silhouette funkcija cilja poredi koheziju i separaciju. SNN funkcija cilja koristi strukturu grafa i ne koristi centroide klastera kao glavni član.
+
+Rezultati pokazuju da centroidna konstrukcija ostaje jaka i kada se aktivni cilj promeni. ACO Centroid dominira među najboljim konfiguracijama za centroidni i silhouette fitness. Za SNN fitness, najbolje konfiguracije su mešovitije. One uključuju graf-lokalne i multi-colony strategije. Ipak, centroidne strategije su i dalje prisutne među najjačim SNN konfiguracijama.
+
+To znači da se dominacija centroidne konstrukcije ne može objasniti samo centroidnom funkcijom cilja. Istovremeno, SNN rezultati pokazuju da promena cilja može promeniti koje strategije konstrukcije postaju konkurentne. Zato zaključke o kvalitetu strategija treba tumačiti zajedno sa izabranom funkcijom cilja.
+
+\subsection{Početni zaključci}
+
+\begin{itemize}
+  \item Köppen-inspirisane i sirove reprezentacije osobina daju slične rezultate. Njihove najbolje fitness vrednosti i vrednosti metrike vegetacije bliske su kroz testirane ciljeve. PCA se ponaša drugačije. Za centroidnu funkciju cilja PCA je jasno slabiji od druge dve reprezentacije. Za silhouette i SNN fitness PCA i dalje može postići dobre interne fitness vrednosti. Ipak, njegova metrika vegetacije ostaje niža. To sugeriše da PCA može ukloniti informacije korisne za validaciju zasnovanu na vegetaciji.
+  \item Tri optimizaciona cilja su snažno korelisana kroz uparene konfiguracije. To znači da konfiguracije koje dobro rade pod jednim ciljem često dobro rade i pod drugim ciljevima. Najjača veza je između silhouette i SNN funkcije cilja.
+  \item Aktivni fitness i metrika vegetacije jesu povezani, ali ta veza nije jednaka kroz celu rang listu konfiguracija. Pošto je niži fitness bolji, a viša metrika vegetacije bolja, slaganje se javlja kao negativna korelacija. Korelacija na celom skupu najjača je za centroidni fitness. Slabija je za silhouette i SNN. Top-N korelacija i analiza varijacije pokazuju da veza postaje jaka tek kada se uključi mnogo konfiguracija. Među najbolje rangiranim konfiguracijama aktivni fitness je slabiji pokazatelj metrike vegetacije. To je najjasnije za SNN cilj.
+  \item Dodatni silhouette i SNN ciljevi smanjuju brigu da centroidna konstrukcija pobeđuje samo zato što je fitness centroidni. ACO Centroid ostaje jak pod više od jednog cilja. Međutim, SNN daje mešovitiju grupu najboljih rešenja. To pokazuje da izabrana funkcija cilja i dalje utiče na to koje strategije konstrukcije izgledaju najbolje.
+  \item Najbolje konfiguracije prema metrici vegetacije uglavnom koriste centroidne algoritme, posebno ACO Centroid + Refinement. Istovremeno, sve tri funkcije cilja pojavljuju se među najboljim konfiguracijama prema metrici vegetacije. Njihova zastupljenost u toj grupi je relativno uravnotežena. To sugeriše da metrika vegetacije nije vezana samo za centroidnu funkciju cilja.
+\end{itemize}
+
+\subsection{Obrasci na nivou parametara}
+
+Ovaj odeljak daje opisni sažetak uticaja parametara u glavnom eksperimentu. Rezultati se zasnivaju na dva seed-a po konfiguraciji. Oni pokazuju široke obrasce. Najjače konfiguracije ponovo se proveravaju u odeljku o višestrukoj validaciji.
+
+Najjasniji obrazac je uticaj strategije konstrukcije. Tabela~\ref{tab:construction_strategy_summary} pokazuje da ACO Centroid ima najbolju srednju vrednost za sve tri funkcije cilja. Takođe ima i najvišu srednju metriku vegetacije. ACO Centroid + Refinement je obično sledeća najjača centroidna strategija. Multi-colony Centroid Graph Spatial je takođe konkurentan, posebno za silhouette i SNN fitness. Kohezione strategije su slabije u ovom sažetku.
+
+Izabrana funkcija cilja ipak utiče na tumačenje. Pod centroidnim i silhouette fitness-om ACO Centroid je jasno najjači. Pod SNN fitness-om graf-lokalne i multi-colony strategije postaju konkurentnije. To je u skladu sa ranijim zapažanjem da kvalitet strategije treba tumačiti zajedno sa aktivnim ciljem.
+
+\begin{table}[ht]
+\centering
+\caption{Sažetak strategija konstrukcije u glavnom eksperimentu. Fitness vrednosti su odvojene po aktivnom cilju. Metrika vegetacije prosečena je preko svih ciljeva.}
+\label{tab:construction_strategy_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccc}
+\hline
+\textbf{Strategija konstrukcije} & \textbf{Srednji centroidni fitness} & \textbf{Srednji silhouette fitness} & \textbf{Srednji SNN fitness} & \textbf{Srednja metrika vegetacije} \\
+\hline
+ACO Centroid & 0.3179 & 0.3254 & 0.2033 & 0.4613 \\
+ACO Centroid + Refinement & 0.3912 & 0.3918 & 0.3052 & 0.4554 \\
+Multi-colony Centroid Graph Spatial & 0.4176 & 0.3544 & 0.2641 & 0.4410 \\
+ACO Graph Local & 0.5935 & 0.4424 & 0.3751 & 0.4273 \\
+Multi-colony Cohesion Graph Spatial & 0.6190 & 0.4622 & 0.4229 & 0.4246 \\
+ACO Cohesion + Refinement & 0.6619 & 0.4998 & 0.5474 & 0.4222 \\
+ACO Cohesion & 0.6769 & 0.5025 & 0.5501 & 0.4185 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+Tabela~\ref{tab:main_parameter_summary} sažima preostale parametre. Najjači obrazac je $\beta$. Vrednost $\beta=3$ daje bolje srednje rezultate od $\beta=1$ za sve tri funkcije cilja. Takođe daje više srednje vrednosti metrike vegetacije. To sugeriše da heuristička informacija snažno utiče na kvalitet rešenja.
+
+\begin{table}[ht]
+\centering
+\caption{Sažetak glavnih vrednosti parametara u glavnom eksperimentu. Fitness vrednosti su odvojene po aktivnom cilju. Metrika vegetacije prosečena je preko svih ciljeva.}
+\label{tab:main_parameter_summary}
+\begin{tabular}{llcccc}
+\hline
+\textbf{Parametar} & \textbf{Vrednost} & \textbf{Centroid} & \textbf{Silhouette} & \textbf{SNN} & \textbf{Metrika vegetacije} \\
+\hline
+\multirow{3}{*}{Ažuriranje feromona} & All ants & 0.5016 & 0.4173 & 0.3518 & 0.4385 \\
+ & Best ant & 0.5450 & 0.4313 & 0.4021 & 0.4335 \\
+ & Quality weighted & 0.5297 & 0.4279 & 0.3896 & 0.4353 \\
+\hline
+\multirow{3}{*}{$\alpha$} & 0.75 & 0.5486 & 0.4319 & 0.4001 & 0.4339 \\
+ & 1.00 & 0.5055 & 0.4123 & 0.3559 & 0.4379 \\
+ & 2.00 & 0.5221 & 0.4323 & 0.3874 & 0.4354 \\
+\hline
+\multirow{2}{*}{$\beta$} & 1 & 0.6841 & 0.5084 & 0.5472 & 0.4225 \\
+ & 3 & 0.3668 & 0.3425 & 0.2151 & 0.4491 \\
+\hline
+\multirow{2}{*}{Evaporacija} & 0.02 & 0.5270 & 0.4264 & 0.3819 & 0.4357 \\
+ & 0.10 & 0.5238 & 0.4246 & 0.3804 & 0.4359 \\
+\hline
+\end{tabular}
+\end{table}
+
+Uticaj parametra $\alpha$ je manji. Vrednost $\alpha=1$ ima najbolje srednje vrednosti za tri funkcije cilja i najvišu srednju metriku vegetacije. Ipak, razlike su skromne u poređenju sa uticajem parametra $\beta$. Strategija ažuriranja feromona takođe ima umeren uticaj. All-ants ažuriranje daje najbolje srednje vrednosti, ali je razlika manja nego kod parametra $\beta$. Evaporacija gotovo da nema vidljiv uticaj. Dve testirane vrednosti daju skoro identične srednje rezultate.
+
+\subsection{Višestruka validacija i statističko testiranje}
+
+Pošto je glavni eksperiment koristio samo dva seed-a po konfiguraciji, izabrane konfiguracije su ponovo pokrenute sa pet seed-ova. Ovaj korak validacije proverava da li je rangiranje najboljih konfiguracija dovoljno stabilno da podrži tvrdnje o uticaju parametara. Za sve reprezentacije osobina kandidati za validaciju izabrani su po istom pravilu. Konfiguracije su najpre morale da prođu prag fitness-a iz glavnog eksperimenta. Zatim su iz tog filtriranog skupa izabrane najbolje ukupne konfiguracije i dodatne najbolje konfiguracije po porodicama algoritama.
+
+Tabela~\ref{tab:stage2_validation_summary} prikazuje najbolje validirane konfiguracije prema aktivnom fitness-u za svaku reprezentaciju osobina i funkciju cilja.
+
+\begin{table}[ht]
+\centering
+\caption{Najbolje višestruko validirane konfiguracije prema aktivnom fitness-u. Fitness se minimizuje.}
+\label{tab:stage2_validation_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllcccc}
+\hline
+\textbf{Skup osobina} & \textbf{Aktivni fitness} & \textbf{Najbolja validirana konfiguracija} & \textbf{Fitness} & \textbf{Std. fitness-a} & \textbf{Metrika vegetacije} & \textbf{Std. vegetacije} \\
+\hline
+Köppen-inspirisane & Centroid & ACO Centroid, best ant, $\alpha=1$, $\beta=3$, evap.=0.10 & 0.2294 & 0.0034 & 0.4723 & 0.0053 \\
+Köppen-inspirisane & Silhouette & Multi-colony Centroid Graph Spatial, quality weighted, $\alpha=2$, $\beta=3$, evap.=0.02 & 0.2809 & 0.0148 & 0.4313 & 0.0133 \\
+Köppen-inspirisane & SNN & Multi-colony Centroid Graph Spatial, all ants, $\alpha=2$, $\beta=3$, evap.=0.02 & 0.0866 & 0.0171 & 0.4325 & 0.0168 \\
+\hline
+Sirove klimatske promenljive & Centroid & ACO Centroid, best ant, $\alpha=1$, $\beta=3$, evap.=0.10 & 0.2337 & 0.0061 & 0.4647 & 0.0070 \\
+Sirove klimatske promenljive & Silhouette & ACO Centroid, quality weighted, $\alpha=2$, $\beta=3$, evap.=0.02 & 0.2646 & 0.0041 & 0.4559 & 0.0042 \\
+Sirove klimatske promenljive & SNN & ACO Centroid, quality weighted, $\alpha=2$, $\beta=3$, evap.=0.02 & 0.1112 & 0.0077 & 0.4579 & 0.0054 \\
+\hline
+PCA osobine & Centroid & ACO Centroid, best ant, $\alpha=1$, $\beta=3$, evap.=0.10 & 0.3061 & 0.0018 & 0.4587 & 0.0016 \\
+PCA osobine & Silhouette & ACO Centroid, best ant, $\alpha=1$, $\beta=3$, evap.=0.02 & 0.2651 & 0.0037 & 0.4560 & 0.0016 \\
+PCA osobine & SNN & Multi-colony Cohesion Graph Spatial, all ants, $\alpha=1$, $\beta=3$, evap.=0.02 & 0.0906 & 0.0198 & 0.4346 & 0.0102 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+Tabela~\ref{tab:stage2_validation_vegetation_summary} prikazuje najbolje validirane konfiguracije prema metrici vegetacije. Ovi redovi su izabrani odvojeno unutar svake reprezentacije osobina i grupe funkcije cilja.
+
+\begin{table}[ht]
+\centering
+\caption{Najbolje višestruko validirane konfiguracije prema metrici vegetacije. Metrika vegetacije se maksimizuje.}
+\label{tab:stage2_validation_vegetation_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllcccc}
+\hline
+\textbf{Skup osobina} & \textbf{Aktivni fitness} & \textbf{Najbolja validirana konfiguracija} & \textbf{Fitness} & \textbf{Std. fitness-a} & \textbf{Metrika vegetacije} & \textbf{Std. vegetacije} \\
+\hline
+Köppen-inspirisane & Centroid & ACO Centroid, best ant, $\alpha=0.75$, $\beta=3$, evap.=0.02 & 0.2325 & 0.0064 & 0.4727 & 0.0091 \\
+Köppen-inspirisane & Silhouette & ACO Centroid, best ant, $\alpha=2$, $\beta=3$, evap.=0.02 & 0.2900 & 0.0115 & 0.4636 & 0.0103 \\
+Köppen-inspirisane & SNN & ACO Centroid, all ants, $\alpha=2$, $\beta=3$, evap.=0.02 & 0.1407 & 0.0119 & 0.4607 & 0.0126 \\
+\hline
+Sirove klimatske promenljive & Centroid & ACO Centroid + Refinement, all ants, $\alpha=0.75$, $\beta=3$, evap.=0.02 & 0.2474 & 0.0101 & 0.4743 & 0.0055 \\
+Sirove klimatske promenljive & Silhouette & ACO Centroid, best ant, $\alpha=0.75$, $\beta=3$, evap.=0.10 & 0.2828 & 0.0058 & 0.4629 & 0.0039 \\
+Sirove klimatske promenljive & SNN & ACO Centroid + Refinement, all ants, $\alpha=0.75$, $\beta=3$, evap.=0.10 & 0.1612 & 0.0178 & 0.4743 & 0.0057 \\
+\hline
+PCA osobine & Centroid & ACO Centroid + Refinement, all ants, $\alpha=0.75$, $\beta=3$, evap.=0.10 & 0.3169 & 0.0129 & 0.4633 & 0.0037 \\
+PCA osobine & Silhouette & ACO Centroid + Refinement, best ant, $\alpha=0.75$, $\beta=3$, evap.=0.10 & 0.2803 & 0.0038 & 0.4615 & 0.0046 \\
+PCA osobine & SNN & ACO Centroid + Refinement, quality weighted, $\alpha=1$, $\beta=3$, evap.=0.10 & 0.1196 & 0.0117 & 0.4614 & 0.0032 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+Rezultati validacije uglavnom su u skladu sa glavnim eksperimentom. Za centroidni fitness, najbolje validirano rešenje ostaje ACO Centroid za sve reprezentacije osobina. Silhouette fitness uglavnom podržava isti centroidni obrazac. Najbolje validirano rešenje je ACO Centroid za sirove i PCA silhouette eksperimente. Za Köppen-inspirisani silhouette najbolji je Multi-colony Centroid Graph Spatial. SNN fitness daje mešovitiji rezultat. Najbolje validirano rešenje je ACO Centroid za sirovi SNN, Multi-colony Centroid Graph Spatial za Köppen-inspirisani SNN i Multi-colony Cohesion Graph Spatial za PCA SNN.
+
+Tabela~\ref{tab:stage2_validation_vegetation_summary} pokazuje da najbolje konfiguracije prema metrici vegetacije ostaju u centroidnoj ili centroidno-rafinisanoj porodici. To važi čak i kada je aktivna funkcija cilja silhouette ili SNN. Ovaj rezultat podržava ranije zapažanje da metrika vegetacije ne bira uvek istu konfiguraciju kao aktivna funkcija cilja.
+
+Upareni t-testovi često ukazuju na razlike između izabranih konfiguracija. Nasuprot tome, Wilcoxonov test rangova sa predznakom nije dao nijednu parnu razliku sa $p<0.05$ ni za fitness ni za metriku vegetacije. Sa samo pet uparenih seed-ova, Wilcoxonov test ima veoma nisku rezoluciju. U mnogim poređenjima najmanja moguća dvostrana $p$-vrednost je 0.0625. Zato validacija podržava široke kvalitativne zaključke o porodicama strategija. Ne opravdava jake tvrdnje da je jedna najbolja konfiguracija statistički superiorna u odnosu na drugu.
+
+Glavni validirani zaključci su:
+\begin{itemize}
+  \item najbolje pojedinačne konfiguracije nisu statistički dovoljno razdvojene da bi se iznosile jake tvrdnje o finim izborima parametara;
+  \item centroidna konstrukcija ostaje najjača za centroidni fitness i takođe ostaje jaka za silhouette fitness;
+  \item SNN fitness daje mešovitiji rezultat i u pojedinim slučajevima čini grafovske ili kohezivne strategije konkurentnim;
+  \item najbolje konfiguracije prema metrici vegetacije ostaju centroidne ili centroidno-rafinisane.
+\end{itemize}
+
+\subsection{Vizuelno poređenje regionalizacija}
+
+Prethodni odeljci poredili su predložene metode pomoću numeričkih mera evaluacije. Slika~\ref{fig:reference_regionalizations} prikazuje dve referentne regionalizacije. Slika~\ref{fig:aco_regionalizations} prikazuje izabrana ACO rešenja. Po jedno ACO rešenje izabrano je za svaku aktivnu funkciju cilja. Jedno dodatno rešenje izabrano je prema metrici vegetacije. Ovo rešenje nije duplikat najboljih fitness rešenja, pa se prikazuje odvojeno. Tabela~\ref{tab:selected_visual_configs} navodi izabrane ACO konfiguracije. Tabela~\ref{tab:regionalization_summary} sažima odgovarajuće evaluacione mere.
+
+\begin{table}[ht]
+\centering
+\caption{ACO konfiguracije izabrane za vizuelno poređenje.}
+\label{tab:selected_visual_configs}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllccccc}
+\hline
+\textbf{Izabrano rešenje} & \textbf{Aktivni cilj} & \textbf{Algoritam} & \textbf{Ažuriranje} & \textbf{$\alpha$} & \textbf{$\beta$} & \textbf{Evap.} & \textbf{$q$} \\
+\hline
+Najbolji centroidni fitness & Centroid & ACO Centroid & Best ant & 1.00 & 3.00 & 0.10 & 0.05 \\
+Najbolji silhouette fitness & Silhouette & Multi-colony Centroid Graph Spatial & Quality weighted & 2.00 & 3.00 & 0.02 & 0.05 \\
+Najbolji SNN fitness & SNN & Multi-colony Centroid Graph Spatial & All ants & 2.00 & 3.00 & 0.10 & 0.05 \\
+Najbolja metrika vegetacije & Centroid & ACO Centroid + Refinement & All ants & 0.75 & 1.00 & 0.10 & 0.05 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.85\textwidth]{../experiments/results/report_comparison_outputs/reference_regionalizations_koppen_features.png}
+    \caption{Referentne regionalizacije na Köppen-inspirisanoj reprezentaciji osobina.}
+    \label{fig:reference_regionalizations}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{../experiments/results/report_comparison_outputs/selected_aco_regionalizations_koppen_features.png}
+    \caption{Izabrane ACO regionalizacije na Köppen-inspirisanoj reprezentaciji osobina.}
+    \label{fig:aco_regionalizations}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Poređenje izabranih regionalizacija.}
+\label{tab:regionalization_summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccc}
+\hline
+\textbf{Regionalizacija} & \textbf{Centroidni fitness} & \textbf{Silhouette fitness} & \textbf{SNN fitness} & \textbf{Metrika vegetacije} & \textbf{ARI} \\
+\hline
+KMeans & 0.2376 & 0.3225 & 0.1651 & 0.4744 & 1.0000 \\
+Köppen-Geiger & 0.3679 & 0.4149 & 0.1062 & 0.4426 & 0.3558 \\
+Najbolji centroidni fitness & 0.2323 & 0.3306 & 0.1547 & 0.4810 & 0.4135 \\
+Najbolji silhouette fitness & 0.3919 & 0.2569 & 0.1008 & 0.4262 & 0.2559 \\
+Najbolji SNN fitness & 0.3797 & 0.2761 & 0.0854 & 0.4164 & 0.2226 \\
+Najbolja metrika vegetacije & 0.2648 & 0.3771 & 0.2086 & 0.4847 & 0.5848 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+Na osnovu slika~\ref{fig:reference_regionalizations} i~\ref{fig:aco_regionalizations} može se izvesti nekoliko zapažanja. Köppen-Geigerova klasifikacija proizvodi relativno velike i kontinuirane klimatske regione sa jednostavnim granicama. Nasuprot tome, KMeans pravi fragmentisanije regione jer grupiše lokacije samo prema klimatskim promenljivim.
+
+ACO rešenja se takođe razlikuju od obe referentne metode. Rešenja sa najboljim centroidnim fitness-om i najboljom metrikom vegetacije imaju više mešane lokalne strukture. Rešenja sa najboljim silhouette i SNN fitness-om imaju veće dominantne regione. To pokazuje da promena aktivnog cilja može promeniti vizuelni oblik regionalizacije.
+
+Numerički rezultati slažu se sa ovim zapažanjima. Svako izabrano ACO fitness rešenje poboljšava referentne regionalizacije prema svom aktivnom cilju. Konfiguracija sa najboljom metrikom vegetacije postiže najvišu vrednost metrike vegetacije. Takođe ima bolji centroidni fitness od Köppena, ali lošiji silhouette i SNN fitness od odgovarajućih najboljih fitness ACO rešenja.
+
+Rešenja sa najboljim silhouette i SNN fitness-om imaju niže vrednosti metrike vegetacije. Najbolje silhouette rešenje ima vrednost metrike vegetacije 0.4262. To je 0.055 manje od rešenja sa najboljim centroidnim fitness-om i 0.058 manje od rešenja sa najboljom metrikom vegetacije. Najbolje SNN rešenje ima vrednost metrike vegetacije 0.4164. To je 0.065 manje od rešenja sa najboljim centroidnim fitness-om i 0.068 manje od rešenja sa najboljom metrikom vegetacije.
+
+Silhouette i SNN mape vizuelno su dominirane jednim velikim regionom. Kako to utiče na kvalitet regionalizacije ne može se zaključiti samo iz prikaza. Mape će biti prosleđene klimatologu na vizuelnu procenu pre donošenja jačeg tumačenja.
+
+U celini, vizuelno poređenje pokazuje da predloženi optimizacioni okvir može da proizvede više različitih regionalizacija iz istih podataka. Najbolji izbor zavisi od toga da li je prioritet centroidna kompaktnost, silhouette separacija, grafovska sličnost ili metrika vegetacije.
 
 \section{Dalji rad}
 \label{sec:future}
 
-Mogući pravci daljeg rada uključuju ispitivanje drugih reprezentacija klimatskih podataka, razvoj alternativnih funkcija cilja koje nisu toliko vezane za centroide, uključivanje ekološke konzistentnosti direktno u optimizaciju i razvoj feromonskih mehanizama koji su invarijantni na permutacije oznaka klastera. Validacija se može proširiti i na druge nezavisne podatke, kao što su nadmorska visina, tip zemljišta ili dodatni ekološki indikatori.
+Ovaj projekat trenutno pruža okvir za klimatsku regionalizaciju pomoću optimizacije kolonijom mrava. Iz njega može proisteći više pravaca daljeg rada.
 
-\section{Zaključak}
+Jedan pravac je ispitivanje osetljivosti na broj klastera. U ovom radu broj klastera je fiksiran na pet, na osnovu broja dominantnih Köppen-Geigerovih klasa posle agregacije. Budući eksperimenti mogli bi da uporede rezultate za druge vrednosti, kao što su $K=4$, $K=6$ i $K=7$. To bi pokazalo da li fitness vrednost i metrika konzistentnosti vegetacije snažno zavise od izabranog broja regiona.
 
-Rad pokazuje da je optimizacija kolonijom mrava upotrebljiv okvir za klimatsku regionalizaciju Srbije. Razvijen je kompletan tok rada od klimatskih rastera do regionalizacija, uključujući preprocesiranje, graf susedstva, više ACO strategija, ažuriranje feromona i ekološku validaciju.
+Metrika konzistentnosti vegetacije razvijena u ovom radu mogla bi se uključiti direktno u optimizacioni proces. Umesto da se koristi samo za evaluaciju, budući rad mogao bi da formuliše klimatsku regionalizaciju kao višeciljni optimizacioni problem. U tom slučaju fitness i metrika vegetacije tretirali bi se kao odvojeni ciljevi. To bi moglo proizvesti Pareto front mogućih regionalizacija, umesto izbora samo jednog najboljeg rešenja.
 
-Rezultati pokazuju da izbor strategije konstrukcije ima najveći uticaj. Centroidne varijante daju najbolje rezultate, dok graf i kohezioni pristupi u prikazanim eksperimentima postižu slabiji fitness i nižu ekološku konzistentnost. Iako je KMeans veoma jak bazni model za funkciju cilja, najbolja ACO rešenja postižu konkurentne vrednosti i mogu da poboljšaju ekološku konzistentnost u odnosu na referentne regionalizacije. Razvijeni okvir zato predstavlja dobru osnovu za dalja istraživanja klimatske regionalizacije pomoću optimizacionih metoda.
+Još jedno moguće poboljšanje je razvoj mehanizama ažuriranja feromona koji su invarijantni na permutacije oznaka klastera. U trenutnoj implementaciji feromon je vezan za eksplicitne oznake klastera. Budući rad mogao bi da ispita reprezentacije koje pojačavaju ekvivalentna klasterovanja bez obzira na numeričke oznake dodeljene klasterima.
+
+Na kraju, predložena metodologija validacije mogla bi se proširiti uključivanjem dodatnih nezavisnih skupova podataka. Pored vegetacije, buduća istraživanja mogla bi da koriste nadmorsku visinu, karakteristike zemljišta ili druge ekološke promenljive pod uticajem klime. To bi omogućilo potpuniju procenu dobijenih klimatskih regionalizacija.
+
+\section{Zaključci}
+
+Ovaj projekat je ispitao primenu optimizacije kolonijom mrava (ACO) na klimatsku regionalizaciju Srbije. Glavni cilj bio je razvoj fleksibilnog optimizacionog okvira koji može da proizvodi alternativne klimatske regionalizacije i da ih evaluira bilo kojom izabranom merom.
+
+Razvijen je kompletan tok obrade, od sirovih klimatskih rasterskih slojeva do konačnih klimatskih regionalizacija. Tok uključuje pripremu podataka, konstrukciju grafa, više ACO strategija konstrukcije, različite mehanizme ažuriranja feromona i validacioni okvir zasnovan na konzistentnosti zemljišnog pokrivača. Modularna implementacija takođe omogućava dodavanje novih algoritama, heuristika i metoda evaluacije uz relativno male izmene.
+
+Tokom eksperimentalne evaluacije upoređeno je više ACO varijanti. Rezultati su pokazali da izbor strategije konstrukcije ima najveći uticaj na konačno rešenje. Centroidni algoritmi su dosledno postizali najbolje rezultate, dok su grafovski i kohezioni pristupi davali niži optimizacioni kvalitet i niže vrednosti metrike vegetacije. Među testiranim parametrima najveći uticaj imala je težina heuristike ($\beta$), dok je stopa evaporacije imala samo mali uticaj na konačne regionalizacije.
+
+Eksperiment je ponovljen i sa sirovim klimatskim promenljivim i PCA osobinama. Široki poredak strategija konstrukcije ostao je sličan kroz reprezentacije osobina. Centroidne metode su ostale jake. To pokazuje da zaključak nije samo artefakt Köppen-inspirisanog skupa osobina. Isto poređenje je ponovljeno i sa silhouette i SNN funkcijama cilja. Ovi ciljevi smanjuju brigu da centroidne metode pobeđuju samo zato što je fitness centroidni. Ipak, SNN rezultati takođe pokazuju da izabrani cilj utiče na to koje strategije konstrukcije postaju konkurentne.
+
+Važan doprinos ovog rada je predložena metrika vegetacije zasnovana na CORINE Land Cover skupu podataka. Za razliku od optimizacionog cilja, koji meri kompaktnost i prostorne osobine dobijenih klastera, metrika vegetacije ocenjuje koliko klimatski regioni odgovaraju nezavisnom skupu podataka o životnoj sredini. Eksperimenti su pokazali da ove dve mere ne izdvajaju uvek ista najbolja rešenja. To pokazuje da spoljašnja validacija daje korisne dodatne informacije pri izboru konačne klimatske regionalizacije.
+
+Dobijene regionalizacije upoređene su i sa tradicionalnom Köppen-Geigerovom klasifikacijom i KMeans algoritmom klasterovanja. Izabrana ACO rešenja poboljšala su referentne regionalizacije prema svojim odgovarajućim optimizacionim ciljevima. Najbolje ACO rešenje prema metrici vegetacije takođe je blago poboljšalo metriku vegetacije u odnosu na KMeans osnovni model. To pokazuje da predloženi optimizacioni okvir može proizvesti konkurentne klimatske regionalizacije.
+
+Višestruka validacija pokazala je da su najbolje konfiguracije međusobno bliske. Sa pet seed-ova, Wilcoxonovi testovi rangova sa predznakom nisu dali dovoljno dokaza za tvrdnju o statistički značajnim razlikama među najboljim konfiguracijama. Validacija zato podržava široke zaključke o porodicama strategija, ali ne i jake tvrdnje o pojedinačnim podešavanjima parametara.
+
+U celini, rezultati pokazuju da je optimizacija kolonijom mrava pogodna za klimatsku regionalizaciju. Iako su se centroidne strategije pokazale kao najefikasnije u testiranom okviru, razvijena metodologija pruža fleksibilnu osnovu za dalje ispitivanje alternativnih optimizacionih ciljeva, strategija konstrukcije i metoda validacije.
+
+\begin{thebibliography}{99}
+
+\bibitem{beck2018}
+Beck, H. E., Zimmermann, N. E., McVicar, T. R., Vergopolan, N., Berg, A., and Wood, E. F. (2018).
+Present and future Köppen-Geiger climate classification maps at 1-km resolution.
+\textit{Scientific Data}, 5, 180214.
+https://doi.org/10.1038/sdata.2018.214
+
+\bibitem{carvalho2016}
+Carvalho, M. J., Melo-Gonçalves, P., Teixeira, J. C., and Rocha, A. (2016).
+Regionalization of Europe based on a K-Means Cluster Analysis of the climate change of temperatures and precipitation.
+\textit{Physics and Chemistry of the Earth, Parts A/B/C}, 94, 22--28.
+https://doi.org/10.1016/j.pce.2016.05.001
+
+\bibitem{clcManual2021}
+Copernicus Land Monitoring Service. (2021).
+Product user manual: CORINE Land Cover from 1990 to 2018 and CORINE Land Cover Changes.
+Version 1.0.
+
+\bibitem{copernicusCLC2018}
+Copernicus Land Monitoring Service. (2018).
+CORINE Land Cover 2018, raster 100 m, Europe, 6-yearly.
+https://doi.org/10.2909/960998c1-1870-4e82-8051-6485205ebbac
+
+\bibitem{deneubourg1991}
+Deneubourg, J.-L., Goss, S., Franks, N., Sendova-Franks, A., Detrain, C., and Chrétien, L. (1991).
+The dynamics of collective sorting: robot-like ants and ant-like robots.
+In \textit{Proceedings of the First International Conference on Simulation of Adaptive Behavior: From Animals to Animats}, 356--363.
+
+\bibitem{dorigo1996}
+Dorigo, M., Maniezzo, V., and Colorni, A. (1996).
+Ant system: optimization by a colony of cooperating agents.
+\textit{IEEE Transactions on Systems, Man, and Cybernetics, Part B: Cybernetics}, 26(1), 29--41.
+https://doi.org/10.1109/3477.484436
+
+\bibitem{dorigo2004}
+Dorigo, M., and Stützle, T. (2004).
+\textit{Ant Colony Optimization}.
+MIT Press.
+
+\bibitem{fovell1993}
+Fovell, R. G., and Fovell, M.-Y. C. (1993).
+Climate zones of the conterminous United States defined using cluster analysis.
+\textit{Journal of Climate}, 6(11), 2103--2135.
+https://doi.org/10.1175/1520-0442(1993)006<2103:CZOTCU>2.0.CO;2
+
+\bibitem{gadm2022}
+GADM. (2022).
+GADM database of Global Administrative Areas, version 4.1.
+https://gadm.org/
+
+\bibitem{handl2006}
+Handl, J., Knowles, J., and Dorigo, M. (2006).
+Ant-based clustering and topographic mapping.
+\textit{Artificial Life}, 12(1), 35--61.
+https://doi.org/10.1162/106454606775186400
+
+\bibitem{hubert1985}
+Hubert, L., and Arabie, P. (1985).
+Comparing partitions.
+\textit{Journal of Classification}, 2, 193--218.
+https://doi.org/10.1007/BF01908075
+
+\bibitem{liu2012}
+Liu, X., Lao, C., Li, X., Liu, Y., and Chen, Y. (2012).
+An integrated approach of remote sensing, GIS and swarm intelligence for zoning protected ecological areas.
+\textit{Landscape Ecology}, 27, 447--463.
+https://doi.org/10.1007/s10980-011-9684-1
+
+\bibitem{koppen1936}
+Köppen, W. (1936).
+Das geographische System der Klimate.
+In W. Köppen and R. Geiger (Eds.), \textit{Handbuch der Klimatologie}, Band 1, Teil C.
+Gebrüder Borntraeger.
+
+\bibitem{milovanovic2017}
+Milovanović, B., Ducić, V., Radovanović, M., and Milivojević, M. (2017).
+Climate regionalization of Serbia according to Köppen climate classification.
+\textit{Journal of the Geographical Institute ``Jovan Cvijić'' SASA}, 67(2), 103--114.
+https://doi.org/10.2298/IJGI1702103M
+
+\bibitem{peel2007}
+Peel, M. C., Finlayson, B. L., and McMahon, T. A. (2007).
+Updated world map of the Köppen-Geiger climate classification.
+\textit{Hydrology and Earth System Sciences}, 11, 1633--1644.
+https://doi.org/10.5194/hess-11-1633-2007
+
+\bibitem{peng2019}
+Peng, J., Zhao, S., Dong, J., Liu, Y., Meersmans, J., Li, H., and Wu, J. (2019).
+Applying ant colony algorithm to identify ecological security patterns in megacities.
+\textit{Environmental Modelling \& Software}, 117, 214--222.
+https://doi.org/10.1016/j.envsoft.2019.03.017
+
+\bibitem{sheridan2011}
+Sheridan, S. C., and Lee, C. C. (2011).
+The self-organizing map in synoptic climatological research.
+\textit{Progress in Physical Geography}, 35(1), 109--119.
+https://doi.org/10.1177/0309133310397582
+
+\bibitem{swenson2019}
+Swenson, L. M., and Grotjahn, R. (2019).
+Using self-organizing maps to identify coherent CONUS precipitation regions.
+\textit{Journal of Climate}, 32(22), 7747--7761.
+https://doi.org/10.1175/JCLI-D-19-0352.1
+
+\bibitem{tong2024}
+Tong, Z., Yang, J., Liu, Y., Zhang, Z., Liu, S., Lu, Y., Pang, B., and An, R. (2024).
+Cooling and optimizing urban heat island based on a thermal knowledge-informed multi-type ant colony model.
+\textit{Remote Sensing of Environment}, 306, 114138.
+https://doi.org/10.1016/j.rse.2024.114138
+
+\bibitem{zhang2021}
+Zhang, Y., Chen, X., Lv, D., and Zhang, Y. (2021).
+Optimization of urban heat effect mitigation based on multi-type ant colony algorithm.
+\textit{Applied Soft Computing}, 112, 107758.
+https://doi.org/10.1016/j.asoc.2021.107758
+
+\end{thebibliography}
 
 \end{document}
