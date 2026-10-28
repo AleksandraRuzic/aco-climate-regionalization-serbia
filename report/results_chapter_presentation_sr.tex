@@ -1,0 +1,539 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{footline}[frame number]
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{adjustbox}
+
+\definecolor{deepblue}{RGB}{30,75,120}
+\definecolor{softgreen}{RGB}{64,130,98}
+\definecolor{warmred}{RGB}{174,74,63}
+\definecolor{mutedgray}{RGB}{96,106,116}
+
+\setbeamercolor{structure}{fg=deepblue}
+\setbeamercolor{frametitle}{fg=white,bg=deepblue}
+\setbeamercolor{title}{fg=white,bg=deepblue}
+\setbeamercolor{block title}{fg=white,bg=deepblue}
+\setbeamercolor{block body}{bg=black!3}
+
+\newcommand{\betterdown}{\(\downarrow\)}
+\newcommand{\betterup}{\(\uparrow\)}
+\newcommand{\smallnote}[1]{\vspace{0.3em}{\scriptsize\color{mutedgray}#1}}
+
+\title[Rezultati i diskusija]{Rezultati i diskusija}
+\subtitle{ACO klimatska regionalizacija Srbije}
+\author{Aleksandra Ružić}
+\date{}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Narativ rezultata}
+  \begin{block}{Glavno pitanje}
+    Koje ACO konfiguracije daju korisne klimatske regionalizacije i kako ih treba birati kada se interna funkcija cilja i eksterna validacija ne poklapaju uvek?
+  \end{block}
+
+  \vspace{0.5em}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Šta se poredi}
+      \begin{itemize}
+        \item 3 reprezentacije osobina
+        \item 3 aktivne funkcije cilja
+        \item 7 strategija konstrukcije
+        \item mreža ACO parametara
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Kako se ocenjuje}
+      \begin{itemize}
+        \item interne fitness vrednosti
+        \item metrika vegetacione konzistentnosti
+        \item vizuelna struktura mapa
+        \item koherentnost osobina i nadmorske visine
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Referentne regionalizacije}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \textbf{Referentna rešenja}
+      \begin{itemize}
+        \item KMeans: klasteruje samo klimatske promenljive.
+        \item K\"oppen-Geiger: klasifikacija zasnovana na pravilima.
+        \item Oba rešenja se evaluiraju istim metrikama kao ACO.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{adjustbox}{max width=\textwidth}
+      \begin{tabular}{lcccc}
+        \toprule
+        Metod & Centroid & Silh. & SNN & Veg. \\
+        \midrule
+        KMeans & 0.238 & 0.322 & 0.165 & 0.474 \\
+        K\"oppen & 0.368 & 0.415 & 0.106 & 0.443 \\
+        \bottomrule
+      \end{tabular}
+      \end{adjustbox}
+      \smallnote{Fitness vrednosti se minimizuju; vegetaciona metrika se maksimizuje.}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.5em}
+  \begin{block}{Tumačenje referentnih rešenja}
+    KMeans je jači prema centroidnoj i silhouette funkciji cilja; K\"oppen bolje čuva lokalnu sličnost susedstva prema SNN cilju.
+  \end{block}
+\end{frame}
+
+\section{Poređenje reprezentacija osobina}
+
+\begin{frame}{Reprezentacije osobina: sažetak glavnog eksperimenta}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{llccc}
+    \toprule
+    Funkcija cilja & Skup osobina & Najbolji fitness \betterdown & Srednji fitness \betterdown & Najbolja veg. \betterup \\
+    \midrule
+    \multirow{3}{*}{Centroid}
+      & K\"oppen-inspirisane & 0.232 & 0.461 & \textbf{0.485} \\
+      & Sirove klimatske & 0.233 & 0.484 & 0.483 \\
+      & PCA & 0.304 & 0.631 & 0.467 \\
+    \midrule
+    \multirow{3}{*}{Silhouette}
+      & K\"oppen-inspirisane & 0.267 & 0.414 & \textbf{0.483} \\
+      & Sirove klimatske & \textbf{0.261} & 0.417 & 0.480 \\
+      & PCA & 0.263 & 0.445 & 0.468 \\
+    \midrule
+    \multirow{3}{*}{SNN}
+      & K\"oppen-inspirisane & 0.083 & 0.349 & \textbf{0.484} \\
+      & Sirove klimatske & 0.096 & 0.368 & 0.482 \\
+      & PCA & \textbf{0.072} & 0.427 & 0.471 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+\end{frame}
+
+\begin{frame}{Zaključci o reprezentacijama osobina}
+  \begin{itemize}
+    \item K\"oppen-inspirisane i sirove klimatske osobine daju slične rezultate kroz različite ciljeve.
+    \item PCA se ponaša drugačije: može dati dobre interne silhouette/SNN vrednosti, ali vegetaciona metrika ostaje niža.
+    \item Za centroidni fitness PCA je jasno slabiji od druge dve reprezentacije.
+    \item Vizuelno poređenje se zato fokusira na K\"oppen-inspirisane osobine: interpretabilne su i konkurentne.
+  \end{itemize}
+
+  \vspace{1em}
+  \begin{block}{Tumačenje}
+    Redukcija dimenzionalnosti može ukloniti informacije korisne za validaciju zasnovanu na vegetaciji, čak i kada sačuva dovoljno strukture za neke interne ciljeve.
+  \end{block}
+\end{frame}
+
+\section{Uticaj funkcije cilja}
+
+\begin{frame}{Slaganje između funkcija cilja}
+  \begin{columns}[T]
+    \begin{column}{0.49\textwidth}
+      \textbf{Pearson korelacija}
+      \begin{adjustbox}{max width=\textwidth}
+      \begin{tabular}{lccc}
+        \toprule
+        & Centroid & Silh. & SNN \\
+        \midrule
+        Centroid & 1.000 & 0.951 & 0.953 \\
+        Silh. & 0.951 & 1.000 & \textbf{0.980} \\
+        SNN & 0.953 & \textbf{0.980} & 1.000 \\
+        \bottomrule
+      \end{tabular}
+      \end{adjustbox}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \textbf{Spearman korelacija}
+      \begin{adjustbox}{max width=\textwidth}
+      \begin{tabular}{lccc}
+        \toprule
+        & Centroid & Silh. & SNN \\
+        \midrule
+        Centroid & 1.000 & 0.906 & 0.901 \\
+        Silh. & 0.906 & 1.000 & \textbf{0.967} \\
+        SNN & 0.901 & \textbf{0.967} & 1.000 \\
+        \bottomrule
+      \end{tabular}
+      \end{adjustbox}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.8em}
+  \begin{block}{Rezultat}
+    Konfiguracije koje su dobre prema jednom cilju često su dobre i prema drugim ciljevima, posebno za silhouette i SNN.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Aktivni fitness i vegetaciona metrika}
+  \begin{adjustbox}{max width=0.82\textwidth}
+  \begin{tabular}{lcccc}
+    \toprule
+    Funkcija cilja & K\"oppen & Sirove & PCA & Ukupno \\
+    \midrule
+    Centroid & -0.962 & -0.974 & -0.972 & \textbf{-0.970} \\
+    Silhouette & -0.828 & -0.916 & -0.928 & -0.886 \\
+    SNN & -0.846 & -0.903 & -0.870 & -0.870 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \smallnote{Pearson korelacija. Niži fitness je bolji; viša vegetaciona metrika je bolja, pa negativna korelacija znači slaganje.}
+
+  \vspace{1em}
+  \begin{itemize}
+    \item Fitness i vegetaciona metrika se slažu na celom skupu konfiguracija.
+    \item Slaganje je najjače za centroidni fitness.
+    \item Korelacija na celom skupu ne garantuje da su najbolje rangirane konfiguracije najbolje i prema vegetaciji.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Top-N korelacija: slaganje zavisi od ranga}
+  \centering
+  \includegraphics[width=0.9\textwidth,height=0.72\textheight,keepaspectratio]{../experiments/results/stage1_topn_analysis/topn_corr_fitness_ecology_combined.png}
+
+  \smallnote{Korelacija se približava vrednosti za ceo skup tek kada se uključi mnogo konfiguracija; među najbolje rangiranim konfiguracijama aktivni fitness je slabija zamena za vegetacioni kvalitet.}
+\end{frame}
+
+\begin{frame}{Najbolji fitness nije isto što i najbolja vegetacija}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{adjustbox}{max width=\textwidth}
+      \begin{tabular}{lc}
+        \toprule
+        Fitness rangiranje & Presek sa top-50 vegetacije \\
+        \midrule
+        Centroid & 18 / 50 \\
+        Silhouette & 0 / 50 \\
+        SNN & 1 / 50 \\
+        \bottomrule
+      \end{tabular}
+      \end{adjustbox}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Interni fitness je koristan za odvajanje slabih od prihvatljivih konfiguracija.
+        \item Među jakim konfiguracijama ne bira pouzdano rešenje sa najboljom vegetacionom konzistentnošću.
+        \item Ovo je posebno važno za silhouette i SNN.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{1em}
+  \begin{block}{Diskusiona tačka}
+    Eksterna validacija nije redundantna: ona menja koje konfiguracije deluju najprivlačnije.
+  \end{block}
+\end{frame}
+
+\section{Uticaj strategije}
+
+\begin{frame}{Strategija konstrukcije je najjači algoritamski faktor}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{lcccc}
+    \toprule
+    Strategija konstrukcije & Centroid \betterdown & Silh. \betterdown & SNN \betterdown & Veg. \betterup \\
+    \midrule
+    ACO Centroid & \textbf{0.318} & \textbf{0.325} & \textbf{0.203} & \textbf{0.461} \\
+    ACO Centroid + Refinement & 0.391 & 0.392 & 0.305 & 0.455 \\
+    Multi-colony Centroid Graph Spatial & 0.418 & 0.354 & 0.264 & 0.441 \\
+    ACO Graph Local & 0.594 & 0.442 & 0.375 & 0.427 \\
+    Multi-colony Cohesion Graph Spatial & 0.619 & 0.462 & 0.423 & 0.425 \\
+    ACO Cohesion + Refinement & 0.662 & 0.500 & 0.547 & 0.422 \\
+    ACO Cohesion & 0.677 & 0.503 & 0.550 & 0.419 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \smallnote{Srednji fitness po aktivnom cilju; vegetaciona metrika je uprosečena kroz ciljeve.}
+\end{frame}
+
+\begin{frame}{Pobedničke strategije zavise od cilja}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{lll}
+    \toprule
+    Kriterijum rangiranja & Dominantne top strategije & Tumačenje \\
+    \midrule
+    Centroidni fitness & ACO Centroid & jaka kompaktnost oko klimatskih centroida \\
+    Silhouette fitness & uglavnom ACO Centroid & centroidna konstrukcija ostaje konkurentna \\
+    SNN fitness & multi-colony / grafovske strategije & lokalna grafovska struktura postaje važnija \\
+    Vegetaciona metrika & ACO Centroid, Centroid + Refinement & eksterna validacija favorizuje centroidnu porodicu \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \vspace{1em}
+  \begin{block}{Odgovor na glavno pitanje}
+    Centroidna konstrukcija ne pobeđuje samo zato što joj centroidni fitness odgovara. Ostaje jaka pod silhouette ciljem i u vegetacionoj validaciji, dok SNN čini grafovske strategije konkurentnijim.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Top konfiguracije: šta se ponavlja?}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \textbf{Obrazac koji se ponavlja}
+      \begin{itemize}
+        \item Top centroidne i silhouette konfiguracije dominirane su ACO Centroid strategijom.
+        \item Top SNN konfiguracije su mešovitije.
+        \item Top vegetacione konfiguracije ostaju centroidne ili centroidno-rafinisane.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \textbf{Tumačenje}
+      \begin{itemize}
+        \item Kvalitet strategije treba tumačiti zajedno sa aktivnim ciljem.
+        \item Centroidne metode su najrobusnija porodica u testiranoj mreži.
+        \item SNN je koristan jer otkriva alternative koje ciljevi zasnovani na kompaktnosti mogu sakriti.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Uticaj parametara}
+
+\begin{frame}{Sažetak uticaja parametara}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{llcccc}
+    \toprule
+    Parametar & Vrednost & Centroid \betterdown & Silh. \betterdown & SNN \betterdown & Veg. \betterup \\
+    \midrule
+    \multirow{3}{*}{Ažuriranje feromona}
+      & Svi mravi & \textbf{0.502} & \textbf{0.417} & \textbf{0.352} & \textbf{0.439} \\
+      & Najbolji mrav & 0.545 & 0.431 & 0.402 & 0.434 \\
+      & Težinski po kvalitetu & 0.530 & 0.428 & 0.390 & 0.435 \\
+    \midrule
+    \multirow{3}{*}{\(\alpha\)}
+      & 0.75 & 0.549 & 0.432 & 0.400 & 0.434 \\
+      & 1.00 & \textbf{0.506} & \textbf{0.412} & \textbf{0.356} & \textbf{0.438} \\
+      & 2.00 & 0.522 & 0.432 & 0.387 & 0.435 \\
+    \midrule
+    \multirow{2}{*}{\(\beta\)}
+      & 1 & 0.684 & 0.508 & 0.547 & 0.423 \\
+      & 3 & \textbf{0.367} & \textbf{0.343} & \textbf{0.215} & \textbf{0.449} \\
+    \midrule
+    \multirow{2}{*}{Evaporacija}
+      & 0.02 & 0.527 & 0.426 & 0.382 & 0.436 \\
+      & 0.10 & \textbf{0.524} & \textbf{0.425} & \textbf{0.380} & \textbf{0.436} \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+\end{frame}
+
+\begin{frame}{Glavni parametarski rezultat: težina heuristike}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{\(\beta = 3\) poboljšava sve ciljeve}
+      \begin{itemize}
+        \item Centroidni prosek: 0.684 \(\rightarrow\) 0.367
+        \item Silhouette prosek: 0.508 \(\rightarrow\) 0.343
+        \item SNN prosek: 0.547 \(\rightarrow\) 0.215
+        \item Vegetacioni prosek: 0.423 \(\rightarrow\) 0.449
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Ostali parametri}
+      \begin{itemize}
+        \item \(\alpha=1\) je najbolji u proseku, ali sa manjim razlikama.
+        \item Ažuriranje svim mravima je najjače u proseku.
+        \item Evaporacija gotovo nema vidljiv uticaj u testiranom opsegu.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{1em}
+  \begin{block}{Tumačenje}
+    Heuristička informacija ima jači uticaj na kvalitet rešenja od testiranih podešavanja feromona i evaporacije.
+  \end{block}
+\end{frame}
+
+\section{Vizuelno i fizičko tumačenje}
+
+\begin{frame}{Referentne mape}
+  \centering
+  \includegraphics[width=0.86\textwidth,height=0.76\textheight,keepaspectratio]{../experiments/results/report_comparison_outputs/reference_regionalizations_koppen_features.png}
+
+  \smallnote{KMeans grupiše prema sličnosti klimatskih promenljivih; K\"oppen-Geiger koristi unapred definisana klimatska pravila.}
+\end{frame}
+
+\begin{frame}{Izabrane ACO regionalizacije}
+  \centering
+  \includegraphics[width=0.96\textwidth,height=0.78\textheight,keepaspectratio]{../experiments/results/report_comparison_outputs/selected_aco_regionalizations_koppen_features.png}
+
+  \smallnote{Prikazano je po jedno rešenje za svaku aktivnu funkciju cilja, plus jedno rešenje izabrano prema vegetacionoj metrici.}
+\end{frame}
+
+\begin{frame}{Veličina klastera i dominantni regioni}
+  \begin{adjustbox}{max width=0.86\textwidth}
+  \begin{tabular}{lc}
+    \toprule
+    Regionalizacija & Udeo najvećeg klastera \\
+    \midrule
+    KMeans & 0.352 \\
+    K\"oppen-Geiger & 0.614 \\
+    Najbolji centroidni fitness & 0.310 \\
+    Najbolji silhouette fitness & 0.739 \\
+    Najbolji SNN fitness & 0.800 \\
+    Najbolja vegetaciona metrika & 0.302 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \vspace{1em}
+  \begin{itemize}
+    \item Izabrane silhouette i SNN mape dominirane su jednim velikim regionom.
+    \item Centroidna i vegetaciono izabrana ACO mapa su uravnoteženije.
+    \item Ovo motiviše proveru da li vizuelna dominacija odgovara slabijoj unutrašnjoj fizičkoj koherentnosti.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Varijacija klimatskih osobina unutar klastera}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{lcc}
+    \toprule
+    Regionalizacija & Odnos za srednju temperaturu \betterdown & Odnos za ukupne padavine \betterdown \\
+    \midrule
+    KMeans & \textbf{0.431} & \textbf{0.393} \\
+    K\"oppen-Geiger & 0.532 & 0.724 \\
+    Najbolji centroidni fitness & 0.459 & 0.414 \\
+    Najbolji silhouette fitness & 0.715 & 0.656 \\
+    Najbolji SNN fitness & 0.682 & 0.663 \\
+    Najbolja vegetaciona metrika & 0.461 & 0.431 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \smallnote{Odnosi su ponderisane standardne devijacije unutar klastera podeljene globalnom standardnom devijacijom iste osobine.}
+
+  \vspace{0.7em}
+  \begin{block}{Rezultat}
+    KMeans, najbolji centroidni fitness i najbolja vegetaciona metrika imaju nižu unutrašnju varijaciju klimatskih osobina. Izabrana silhouette i SNN rešenja su manje koherentna za temperaturu.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Nadmorska visina kao nezavisna validacija}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{adjustbox}{max width=\textwidth}
+      \begin{tabular}{lc}
+        \toprule
+        Regionalizacija & Ponderisana std. visine (m) \betterdown \\
+        \midrule
+        KMeans & \textbf{202.1} \\
+        K\"oppen-Geiger & 239.4 \\
+        Najbolji centroidni fitness & 209.0 \\
+        Najbolji silhouette fitness & 302.2 \\
+        Najbolji SNN fitness & 293.3 \\
+        Najbolja vegetaciona metrika & 210.1 \\
+        \bottomrule
+      \end{tabular}
+      \end{adjustbox}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{itemize}
+        \item Nadmorska visina nije korišćena tokom klasterovanja.
+        \item Centroidna i vegetaciono izabrana ACO mapa bliske su KMeans-u.
+        \item Izabrane silhouette i SNN mape imaju znatno veću varijaciju nadmorske visine.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Koncentracija visokih nadmorskih visina}
+  \begin{adjustbox}{max width=0.82\textwidth}
+  \begin{tabular}{lcc}
+    \toprule
+    Metod & Udeo top klastera iznad 1000 m & Obuhvaćeni pikseli iznad 1000 m \\
+    \midrule
+    K\"oppen-Geiger & 31.8\% & 95.5\% \\
+    Najbolja vegetaciona metrika & \textbf{57.4\%} & 84.7\% \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \vspace{1em}
+  \begin{itemize}
+    \item K\"oppen obuhvata većinu visokoplaninskih piksela, ali ih smešta u širi planinski klaster.
+    \item Najbolje vegetaciono ACO rešenje formira koncentrisaniji visokoplaninski klaster.
+    \item Ovo podržava ideju da eksterna validacija može otkriti fizički smislene razlike između mapa.
+  \end{itemize}
+\end{frame}
+
+\section{Višestruka validacija}
+
+\begin{frame}{Višestruka validacija}
+  \begin{itemize}
+    \item Izabrane konfiguracije su ponovo pokrenute sa pet seed-ova.
+    \item Cilj je bio da se proveri da li najjači obrasci iz glavnog eksperimenta opstaju pod dodatnom stohastičkom varijacijom.
+    \item Validacija više podržava zaključke o porodicama strategija nego tačno rangiranje pojedinačnih parametara.
+  \end{itemize}
+
+  \vspace{0.7em}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{lll}
+    \toprule
+    Aktivni cilj & Validirani obrazac & Glavno tumačenje \\
+    \midrule
+    Centroid & ACO Centroid ostaje najbolji kroz skupove osobina & stabilan centroidni rezultat \\
+    Silhouette & uglavnom ACO Centroid; jedan multi-colony pobednik & centroid ostaje jak \\
+    SNN & mešoviti pobednici kroz skupove osobina & grafovske/kohezione strategije postaju konkurentne \\
+    Vegetacija & centroidni ili centroid-refinement pobednici & eksterna metrika favorizuje centroidnu porodicu \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+\end{frame}
+
+\begin{frame}{Statistički oprez}
+  \begin{itemize}
+    \item Upareni t-testovi često ukazuju na razlike između izabranih konfiguracija.
+    \item Wilcoxon signed-rank testovi nisu dali uparene razlike sa \(p<0.05\).
+    \item Sa pet uparenih seed-ova Wilcoxon test ima vrlo nisku rezoluciju; u mnogim poređenjima najmanja dostižna dvostrana \(p\)-vrednost je 0.0625.
+  \end{itemize}
+
+  \vspace{1em}
+  \begin{block}{Validirani zaključak}
+    Rezultati opravdavaju široke kvalitativne tvrdnje o porodicama strategija, ali ne i jake tvrdnje da je jedna tačna top konfiguracija statistički superiorna u odnosu na drugu.
+  \end{block}
+\end{frame}
+
+\section{Zaključci}
+
+\begin{frame}{Glavni zaključci}
+  \begin{itemize}
+    \item ACO je koristan okvir za dobijanje alternativnih klimatskih regionalizacija Srbije.
+    \item Centroidna konstrukcija je najrobusnija porodica strategija u testiranoj mreži.
+    \item Izabrana funkcija cilja je važna: SNN čini grafovske i multi-colony strategije konkurentnijim.
+    \item K\"oppen-inspirisane i sirove osobine su slično jake; PCA je manje ubedljiv pod vegetacionom validacijom.
+    \item Vegetaciona metrika nije redundantna u odnosu na interni fitness i može promeniti izbor poželjnog rešenja.
+    \item Nadmorska visina i varijacija osobina unutar klastera podržavaju izabrana centroidna/vegetaciona rešenja kao fizički koherentna.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Završna diskusiona tačka}
+  \begin{block}{Praktična preporuka}
+    Interni fitness treba koristiti za uklanjanje slabih konfiguracija, a zatim među jakim kandidatima birati pomoću eksterne validacije i interpretacije mapa.
+  \end{block}
+
+  \vspace{1em}
+  \begin{itemize}
+    \item Ako su prioritet kompaktni klimatski regioni: ACO Centroid je najsigurniji izbor.
+    \item Ako je prioritet lokalna grafovska struktura: SNN ciljeve treba tumačiti zasebno.
+    \item Ako je prioritet ekološka ubedljivost: vegetacione i elevacione provere treba uključiti u konačni izbor.
+  \end{itemize}
+\end{frame}
+
+\end{document}

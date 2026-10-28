@@ -82,6 +82,8 @@ Aktivni fitness i ekološka metrika su povezani, ali ta veza nije jednako stabil
 
 Odabrane konfiguracije su zatim ponovo pokrenute sa pet seed-ova. Validacija uglavnom potvrđuje glavni eksperiment. Za centroidni fitness najbolja validirana konfiguracija ostaje ACO Centroid za sve reprezentacije osobina. Silhouette fitness uglavnom podržava isti centroidni obrazac. SNN fitness je mešovitiji: ACO Centroid je najbolji za sirove osobine, Multi-colony Centroid Graph Spatial za Köppen-inspirisane osobine, a Multi-colony Cohesion Graph Spatial za PCA osobine. Najbolje konfiguracije po ekološkoj metrici ostaju u centroidnoj ili centroidno-rafinisanoj porodici.
 
+Kao dodatna provera korišćena je nadmorska visina iz GEDTM30 skupa podataka. KMeans, najbolje centroidno rešenje i najbolje rešenje po metrici vegetacije imaju najnižu unutarklastersku varijaciju nadmorske visine. Silhouette i SNN rešenja imaju višu varijaciju, što podržava zaključak da više mešaju nizijske i planinske oblasti.
+
 \section*{Zaključak}
 
 Rezultati pokazuju da je ACO upotrebljiv okvir za klimatsku regionalizaciju Srbije. Izabrana ACO rešenja poboljšavaju referentne regionalizacije po svojim aktivnim funkcijama cilja. Najbolje ekološko ACO rešenje takođe blago poboljšava ponderisanu ekološku konzistentnost u odnosu na KMeans bazni model.

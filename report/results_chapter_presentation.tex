@@ -1,0 +1,539 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{footline}[frame number]
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{adjustbox}
+
+\definecolor{deepblue}{RGB}{30,75,120}
+\definecolor{softgreen}{RGB}{64,130,98}
+\definecolor{warmred}{RGB}{174,74,63}
+\definecolor{mutedgray}{RGB}{96,106,116}
+
+\setbeamercolor{structure}{fg=deepblue}
+\setbeamercolor{frametitle}{fg=white,bg=deepblue}
+\setbeamercolor{title}{fg=white,bg=deepblue}
+\setbeamercolor{block title}{fg=white,bg=deepblue}
+\setbeamercolor{block body}{bg=black!3}
+
+\newcommand{\betterdown}{\(\downarrow\)}
+\newcommand{\betterup}{\(\uparrow\)}
+\newcommand{\smallnote}[1]{\vspace{0.3em}{\scriptsize\color{mutedgray}#1}}
+
+\title[Results and Discussion]{Results and Discussion}
+\subtitle{ACO-based climate regionalization of Serbia}
+\author{Aleksandra Ruzic}
+\date{}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Results Narrative}
+  \begin{block}{Main question}
+    Which ACO configurations produce useful climate regionalizations, and how should they be selected when internal fitness and external validation do not always agree?
+  \end{block}
+
+  \vspace{0.5em}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{What is compared}
+      \begin{itemize}
+        \item 3 feature representations
+        \item 3 active fitness functions
+        \item 7 construction strategies
+        \item ACO parameter grid
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{How it is judged}
+      \begin{itemize}
+        \item internal fitness values
+        \item vegetation consistency metric
+        \item visual map structure
+        \item feature and elevation coherence
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Reference Regionalizations}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \textbf{Baselines}
+      \begin{itemize}
+        \item KMeans: clusters climate variables only.
+        \item K\"oppen-Geiger: rule-based climate classes.
+        \item Both are evaluated with the same metrics as ACO.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{adjustbox}{max width=\textwidth}
+      \begin{tabular}{lcccc}
+        \toprule
+        Method & Centroid & Silh. & SNN & Veg. \\
+        \midrule
+        KMeans & 0.238 & 0.322 & 0.165 & 0.474 \\
+        K\"oppen & 0.368 & 0.415 & 0.106 & 0.443 \\
+        \bottomrule
+      \end{tabular}
+      \end{adjustbox}
+      \smallnote{Fitness values are minimized; vegetation metric is maximized.}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.5em}
+  \begin{block}{Baseline interpretation}
+    KMeans is stronger on centroid and silhouette fitness; K\"oppen preserves more local graph-neighborhood similarity under SNN.
+  \end{block}
+\end{frame}
+
+\section{Feature Representation Comparison}
+
+\begin{frame}{Feature Representations: Main Experiment Summary}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{llccc}
+    \toprule
+    Fitness objective & Feature set & Best fitness \betterdown & Mean fitness \betterdown & Best vegetation \betterup \\
+    \midrule
+    \multirow{3}{*}{Centroid}
+      & K\"oppen-inspired & 0.232 & 0.461 & \textbf{0.485} \\
+      & Raw climate & 0.233 & 0.484 & 0.483 \\
+      & PCA & 0.304 & 0.631 & 0.467 \\
+    \midrule
+    \multirow{3}{*}{Silhouette}
+      & K\"oppen-inspired & 0.267 & 0.414 & \textbf{0.483} \\
+      & Raw climate & \textbf{0.261} & 0.417 & 0.480 \\
+      & PCA & 0.263 & 0.445 & 0.468 \\
+    \midrule
+    \multirow{3}{*}{SNN}
+      & K\"oppen-inspired & 0.083 & 0.349 & \textbf{0.484} \\
+      & Raw climate & 0.096 & 0.368 & 0.482 \\
+      & PCA & \textbf{0.072} & 0.427 & 0.471 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+\end{frame}
+
+\begin{frame}{Feature Representation Takeaways}
+  \begin{itemize}
+    \item K\"oppen-inspired and raw climate features give similar results across objectives.
+    \item PCA behaves differently: it can achieve good internal silhouette/SNN values, but its vegetation metric remains lower.
+    \item For centroid fitness, PCA is clearly weaker than the other two representations.
+    \item The visual comparison therefore focuses on K\"oppen-inspired features: they are interpretable and competitive.
+  \end{itemize}
+
+  \vspace{1em}
+  \begin{block}{Interpretation}
+    Dimensionality reduction may remove information that is useful for vegetation-based validation, even when it preserves enough structure for some internal objectives.
+  \end{block}
+\end{frame}
+
+\section{Fitness Influence}
+
+\begin{frame}{Agreement Between Fitness Objectives}
+  \begin{columns}[T]
+    \begin{column}{0.49\textwidth}
+      \textbf{Pearson correlation}
+      \begin{adjustbox}{max width=\textwidth}
+      \begin{tabular}{lccc}
+        \toprule
+        & Centroid & Silh. & SNN \\
+        \midrule
+        Centroid & 1.000 & 0.951 & 0.953 \\
+        Silh. & 0.951 & 1.000 & \textbf{0.980} \\
+        SNN & 0.953 & \textbf{0.980} & 1.000 \\
+        \bottomrule
+      \end{tabular}
+      \end{adjustbox}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \textbf{Spearman correlation}
+      \begin{adjustbox}{max width=\textwidth}
+      \begin{tabular}{lccc}
+        \toprule
+        & Centroid & Silh. & SNN \\
+        \midrule
+        Centroid & 1.000 & 0.906 & 0.901 \\
+        Silh. & 0.906 & 1.000 & \textbf{0.967} \\
+        SNN & 0.901 & \textbf{0.967} & 1.000 \\
+        \bottomrule
+      \end{tabular}
+      \end{adjustbox}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.8em}
+  \begin{block}{Result}
+    Configurations that perform well under one objective often perform well under the others, especially for silhouette and SNN.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Active Fitness and Vegetation Metric}
+  \begin{adjustbox}{max width=0.82\textwidth}
+  \begin{tabular}{lcccc}
+    \toprule
+    Fitness objective & K\"oppen & Raw & PCA & Overall \\
+    \midrule
+    Centroid & -0.962 & -0.974 & -0.972 & \textbf{-0.970} \\
+    Silhouette & -0.828 & -0.916 & -0.928 & -0.886 \\
+    SNN & -0.846 & -0.903 & -0.870 & -0.870 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \smallnote{Pearson correlation. Lower fitness is better; higher vegetation metric is better, so negative correlation indicates agreement.}
+
+  \vspace{1em}
+  \begin{itemize}
+    \item Fitness and vegetation metric agree over the full configuration set.
+    \item The agreement is strongest for centroid fitness.
+    \item Full-set correlation does not guarantee that the best-ranked configurations are also best by vegetation.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Top-N Correlation: Agreement Changes With Rank}
+  \centering
+  \includegraphics[width=0.9\textwidth,height=0.72\textheight,keepaspectratio]{../experiments/results/stage1_topn_analysis/topn_corr_fitness_ecology_combined.png}
+
+  \smallnote{Correlation approaches the full-set value only after many configurations are included; among top-ranked configurations, active fitness is a weaker proxy for vegetation quality.}
+\end{frame}
+
+\begin{frame}{Top-Ranked Fitness Is Not Equivalent to Top Vegetation}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{adjustbox}{max width=\textwidth}
+      \begin{tabular}{lc}
+        \toprule
+        Fitness ranking & Overlap with top-50 vegetation \\
+        \midrule
+        Centroid & 18 / 50 \\
+        Silhouette & 0 / 50 \\
+        SNN & 1 / 50 \\
+        \bottomrule
+      \end{tabular}
+      \end{adjustbox}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Internal fitness is useful for separating weak from acceptable configurations.
+        \item Among strong configurations, it does not reliably select the most vegetation-consistent solution.
+        \item This is especially important for silhouette and SNN.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{1em}
+  \begin{block}{Discussion point}
+    External validation is not redundant: it changes which configurations look most attractive.
+  \end{block}
+\end{frame}
+
+\section{Strategy Influence}
+
+\begin{frame}{Construction Strategy Is the Strongest Algorithmic Factor}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{lcccc}
+    \toprule
+    Construction strategy & Centroid \betterdown & Silh. \betterdown & SNN \betterdown & Veg. \betterup \\
+    \midrule
+    ACO Centroid & \textbf{0.318} & \textbf{0.325} & \textbf{0.203} & \textbf{0.461} \\
+    ACO Centroid + Refinement & 0.391 & 0.392 & 0.305 & 0.455 \\
+    Multi-colony Centroid Graph Spatial & 0.418 & 0.354 & 0.264 & 0.441 \\
+    ACO Graph Local & 0.594 & 0.442 & 0.375 & 0.427 \\
+    Multi-colony Cohesion Graph Spatial & 0.619 & 0.462 & 0.423 & 0.425 \\
+    ACO Cohesion + Refinement & 0.662 & 0.500 & 0.547 & 0.422 \\
+    ACO Cohesion & 0.677 & 0.503 & 0.550 & 0.419 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \smallnote{Mean fitness by active objective; vegetation metric averaged across objectives.}
+\end{frame}
+
+\begin{frame}{Strategy Winners Depend on the Objective}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{lll}
+    \toprule
+    Ranking criterion & Dominant top strategies & Interpretation \\
+    \midrule
+    Centroid fitness & ACO Centroid & strong compactness around climate centroids \\
+    Silhouette fitness & mostly ACO Centroid & centroid construction remains competitive \\
+    SNN fitness & multi-colony / graph strategies appear & graph-local structure matters more \\
+    Vegetation metric & ACO Centroid, Centroid + Refinement & external validation favors centroid family \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \vspace{1em}
+  \begin{block}{Answer to the main concern}
+    Centroid construction does not win only because the centroid fitness favors it. It remains strong under silhouette fitness and in vegetation validation, while SNN makes graph-aware strategies more competitive.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Top Configurations: What Repeats?}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \textbf{Repeated pattern}
+      \begin{itemize}
+        \item Top centroid and silhouette configurations are dominated by ACO Centroid.
+        \item Top SNN configurations are more mixed.
+        \item Top vegetation configurations remain centroid or centroid-refinement based.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \textbf{Interpretation}
+      \begin{itemize}
+        \item Strategy quality should be interpreted together with the active objective.
+        \item Centroid-based methods are the most robust family in this experimental grid.
+        \item SNN is useful because it exposes alternatives that compactness-based objectives may hide.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Parameter Influence}
+
+\begin{frame}{Parameter Influence Summary}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{llcccc}
+    \toprule
+    Parameter & Value & Centroid \betterdown & Silh. \betterdown & SNN \betterdown & Veg. \betterup \\
+    \midrule
+    \multirow{3}{*}{Pheromone update}
+      & All ants & \textbf{0.502} & \textbf{0.417} & \textbf{0.352} & \textbf{0.439} \\
+      & Best ant & 0.545 & 0.431 & 0.402 & 0.434 \\
+      & Quality weighted & 0.530 & 0.428 & 0.390 & 0.435 \\
+    \midrule
+    \multirow{3}{*}{\(\alpha\)}
+      & 0.75 & 0.549 & 0.432 & 0.400 & 0.434 \\
+      & 1.00 & \textbf{0.506} & \textbf{0.412} & \textbf{0.356} & \textbf{0.438} \\
+      & 2.00 & 0.522 & 0.432 & 0.387 & 0.435 \\
+    \midrule
+    \multirow{2}{*}{\(\beta\)}
+      & 1 & 0.684 & 0.508 & 0.547 & 0.423 \\
+      & 3 & \textbf{0.367} & \textbf{0.343} & \textbf{0.215} & \textbf{0.449} \\
+    \midrule
+    \multirow{2}{*}{Evaporation}
+      & 0.02 & 0.527 & 0.426 & 0.382 & 0.436 \\
+      & 0.10 & \textbf{0.524} & \textbf{0.425} & \textbf{0.380} & \textbf{0.436} \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+\end{frame}
+
+\begin{frame}{Main Parameter Result: Heuristic Weight}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{\(\beta = 3\) improves all objectives}
+      \begin{itemize}
+        \item Centroid mean: 0.684 \(\rightarrow\) 0.367
+        \item Silhouette mean: 0.508 \(\rightarrow\) 0.343
+        \item SNN mean: 0.547 \(\rightarrow\) 0.215
+        \item Vegetation mean: 0.423 \(\rightarrow\) 0.449
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Other parameters}
+      \begin{itemize}
+        \item \(\alpha=1\) is best on average, but with smaller gaps.
+        \item All-ants update is strongest on average.
+        \item Evaporation has almost no visible effect in the tested range.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{1em}
+  \begin{block}{Interpretation}
+    Heuristic information has a stronger influence on solution quality than the tested pheromone or evaporation settings.
+  \end{block}
+\end{frame}
+
+\section{Visual and Physical Interpretation}
+
+\begin{frame}{Reference Maps}
+  \centering
+  \includegraphics[width=0.86\textwidth,height=0.76\textheight,keepaspectratio]{../experiments/results/report_comparison_outputs/reference_regionalizations_koppen_features.png}
+
+  \smallnote{KMeans groups by climate-variable similarity; K\"oppen-Geiger uses predefined climate rules.}
+\end{frame}
+
+\begin{frame}{Selected ACO Regionalizations}
+  \centering
+  \includegraphics[width=0.96\textwidth,height=0.78\textheight,keepaspectratio]{../experiments/results/report_comparison_outputs/selected_aco_regionalizations_koppen_features.png}
+
+  \smallnote{One solution is selected for each active fitness function, plus one solution selected by vegetation metric.}
+\end{frame}
+
+\begin{frame}{Cluster Size and Dominant Regions}
+  \begin{adjustbox}{max width=0.86\textwidth}
+  \begin{tabular}{lc}
+    \toprule
+    Regionalization & Largest cluster share \\
+    \midrule
+    KMeans & 0.352 \\
+    K\"oppen-Geiger & 0.614 \\
+    Best centroid fitness & 0.310 \\
+    Best silhouette fitness & 0.739 \\
+    Best SNN fitness & 0.800 \\
+    Best vegetation metric & 0.302 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \vspace{1em}
+  \begin{itemize}
+    \item Silhouette and SNN selected maps are dominated by one large region.
+    \item Centroid and vegetation-selected ACO maps are more balanced.
+    \item This motivates checking whether visual dominance corresponds to weaker internal physical coherence.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Within-Cluster Climate Feature Variation}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{lcc}
+    \toprule
+    Regionalization & Mean temperature ratio \betterdown & Total precipitation ratio \betterdown \\
+    \midrule
+    KMeans & \textbf{0.431} & \textbf{0.393} \\
+    K\"oppen-Geiger & 0.532 & 0.724 \\
+    Best centroid fitness & 0.459 & 0.414 \\
+    Best silhouette fitness & 0.715 & 0.656 \\
+    Best SNN fitness & 0.682 & 0.663 \\
+    Best vegetation metric & 0.461 & 0.431 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \smallnote{Ratios are pooled within-cluster standard deviations divided by the global standard deviation of that feature.}
+
+  \vspace{0.7em}
+  \begin{block}{Result}
+    KMeans, best centroid-fitness and best vegetation-metric solutions have lower internal climate-feature variation. The selected silhouette and SNN solutions are less coherent for temperature.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Elevation as Independent Validation}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{adjustbox}{max width=\textwidth}
+      \begin{tabular}{lc}
+        \toprule
+        Regionalization & Pooled elevation std. (m) \betterdown \\
+        \midrule
+        KMeans & \textbf{202.1} \\
+        K\"oppen-Geiger & 239.4 \\
+        Best centroid fitness & 209.0 \\
+        Best silhouette fitness & 302.2 \\
+        Best SNN fitness & 293.3 \\
+        Best vegetation metric & 210.1 \\
+        \bottomrule
+      \end{tabular}
+      \end{adjustbox}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{itemize}
+        \item Elevation is not used during clustering.
+        \item Centroid and vegetation-selected ACO maps are close to KMeans.
+        \item Silhouette and SNN selected maps have much higher elevation variation.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{High-Elevation Concentration}
+  \begin{adjustbox}{max width=0.82\textwidth}
+  \begin{tabular}{lcc}
+    \toprule
+    Method & Share of top cluster above 1000 m & Captured pixels above 1000 m \\
+    \midrule
+    K\"oppen-Geiger & 31.8\% & 95.5\% \\
+    Best vegetation metric & \textbf{57.4\%} & 84.7\% \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \vspace{1em}
+  \begin{itemize}
+    \item K\"oppen captures most high-elevation pixels, but places them in a broader mountain-containing cluster.
+    \item The best vegetation ACO solution forms a more concentrated high-elevation cluster.
+    \item This supports the idea that external validation can reveal physically meaningful differences between maps.
+  \end{itemize}
+\end{frame}
+
+\section{Multi-Seed Validation}
+
+\begin{frame}{Multi-Seed Validation}
+  \begin{itemize}
+    \item Selected configurations were rerun with five seeds.
+    \item The goal was to check whether the strongest main-experiment patterns survive additional stochastic variation.
+    \item Validation supports strategy-family conclusions more than exact parameter rankings.
+  \end{itemize}
+
+  \vspace{0.7em}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{lll}
+    \toprule
+    Active objective & Validated pattern & Main interpretation \\
+    \midrule
+    Centroid & ACO Centroid remains best across feature sets & stable centroid-family result \\
+    Silhouette & mostly ACO Centroid; one multi-colony winner & centroid remains strong \\
+    SNN & mixed winners across feature sets & graph/cohesion strategies become competitive \\
+    Vegetation & centroid or centroid-refinement winners & external metric favors centroid family \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+\end{frame}
+
+\begin{frame}{Statistical Caution}
+  \begin{itemize}
+    \item Pairwise paired t-tests often indicated differences between selected configurations.
+    \item Wilcoxon signed-rank tests did not produce pairwise differences with \(p<0.05\).
+    \item With five paired seeds, Wilcoxon has very low resolution; in many comparisons the smallest attainable two-sided \(p\)-value is 0.0625.
+  \end{itemize}
+
+  \vspace{1em}
+  \begin{block}{Validated conclusion}
+    The results justify broad qualitative claims about strategy families, but not strong claims that one exact top configuration is statistically superior to another.
+  \end{block}
+\end{frame}
+
+\section{Conclusions}
+
+\begin{frame}{Main Conclusions}
+  \begin{itemize}
+    \item ACO is a useful framework for producing alternative climate regionalizations of Serbia.
+    \item Centroid-based construction is the most robust strategy family in the tested grid.
+    \item The selected fitness objective matters: SNN makes graph-aware and multi-colony strategies more competitive.
+    \item K\"oppen-inspired and raw features are similarly strong; PCA is less convincing under vegetation validation.
+    \item The vegetation metric is not redundant with internal fitness and can change which solution is preferred.
+    \item Elevation and within-cluster feature variation support the selected centroid/vegetation solutions as physically coherent.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Final Discussion Point}
+  \begin{block}{Practical recommendation}
+    Use internal fitness to remove weak configurations, then select among strong candidates using external validation and map interpretation.
+  \end{block}
+
+  \vspace{1em}
+  \begin{itemize}
+    \item If compact climate regions are the priority: ACO Centroid is the safest choice.
+    \item If graph-local structure is the priority: SNN objectives deserve separate interpretation.
+    \item If ecological plausibility is the priority: vegetation and elevation checks should be part of final selection.
+  \end{itemize}
+\end{frame}
+
+\end{document}

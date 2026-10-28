@@ -72,7 +72,7 @@ Klasifikacija je hijerarhijska. Oznake klasa sastoje se od tri slova. Prvi nivo 
 \centering
 \begin{tabular}{ll}
 \hline
-Grupa & Opis \\
+\textbf{Klimatska grupa} & \textbf{Opis} \\
 \hline
 A & Tropske klime \\
 B & Suve klime \\
@@ -109,6 +109,7 @@ Uprkos širokoj upotrebi, Köppen-Geigerova klasifikacija ima i nekoliko ograni�
 \begin{itemize}
   \item Klasifikacija je potpuno zasnovana na pravilima. Svaka lokacija se dodeljuje klimatskoj klasi pomoću unapred definisanih pragova, umesto da se dobijeni regioni optimizuju prema konkretnom cilju.
   \item Granice između klimatskih klasa određene su fiksnim pragovima. Male razlike u temperaturi ili padavinama oko tih pragova mogu dovesti do različitih klimatskih klasa, iako su klimatski uslovi veoma slični.
+  \item Klasifikacija ne koristi direktno topografiju, nadmorsku visinu ili lokalne oblike reljefa. Njihov uticaj se vidi samo posredno, kroz temperaturu i padavine. Zbog toga sistem može da propusti lokalne klimatske razlike povezane sa planinskim oblastima, dolinama ili ekspozicijom terena.
   \item U zavisnosti od rezolucije mape, klasifikacija zasnovana na pravilima može da proizvede nezgodno male klastere, zbog čega regionalizacija može delovati fragmentisano i nekoherentno.
 \end{itemize}
 
@@ -561,6 +562,16 @@ Korišćene su sledeće prirodne kategorije:
 
 Oblasti koje pripadaju poljoprivrednim klasama zadržane su kao posebna kategorija. Za razliku od prirodne vegetacije, poljoprivredno zemljište je snažno pod uticajem ljudskog upravljanja. Ipak, različite klase poljoprivrednog zemljišnog pokrivača i dalje daju korisne informacije o klimatskoj pogodnosti.
 
+Sledeće poljoprivredne klase postoje u rasteru za Srbiju i koriste se u poljoprivrednoj komponenti:
+\begin{itemize}
+  \item nenavodnjavano obradivo zemljište
+  \item vinogradi
+  \item voćnjaci i plantaže bobičastog voća
+  \item pašnjaci
+  \item složeni obrasci obrade zemljišta
+  \item zemljište pretežno zauzeto poljoprivredom, sa značajnim udelom prirodne vegetacije
+\end{itemize}
+
 Veštačke površine su takođe izdvojene posebno. One uglavnom predstavljaju gradove, puteve i drugu izgrađenu infrastrukturu. Njihov prostorni raspored određen je uglavnom ljudskom aktivnošću, a ne klimom. Zato se veštačke površine isključuju iz skora konzistentnosti vegetacije. Njihov udeo se ipak prijavljuje kao dodatna informacija.
 
 \subsubsection{Konzistentnost vegetacije poljoprivrednih površina}
@@ -658,6 +669,15 @@ E
 \]
 Veće vrednosti znače da su klimatski regioni ekološki konzistentniji.
 
+\subsection{Spoljašnja validacija zasnovana na nadmorskoj visini}
+Nadmorska visina koristi se kao dodatni nezavisni fizički sloj za validaciju. Ne koristi se tokom klasterovanja. Koristi se samo posle klasterovanja, da se proveri da li su dobijeni regioni koherentni po visini terena.
+
+Raster nadmorske visine preuzet je iz GEDTM30 skupa podataka, distribuiranog preko OpenTopography platforme \cite{ho2025gedtm30data}. GEDTM30 je 30 m model terena bez vegetacije i objekata, nastao kombinovanjem više globalnih visinskih skupova podataka sa ICESat-2 i GEDI opažanjima \cite{ho2025gedtm30}.
+
+Raster se uzorkuje na istim validnim klimatskim pikselima koji se koriste u toku klasterovanja. Oznake klastera se zatim vraćaju na piksele pomoću mapiranja između piksela i optimizacionih čvorova, opisanog u pretprocesiranju. Za svaku regionalizaciju nadmorska visina se sažima unutar svakog klastera. Glavna mera je ponderisana unutarklasterska standardna devijacija nadmorske visine. Ona se računa tako što se standardne devijacije klastera uprosečavaju koristeći veličinu klastera kao težinu. Niže vrednosti znače da su regioni interno koherentniji po visini terena.
+
+Kao dodatna dijagnostika koriste se pikseli veće nadmorske visine. Pikseli iznad 1000 m tretiraju se kao visokoplaninski pikseli. Za svaku regionalizaciju proverava se koliko su ti pikseli koncentrisani u glavnom visokoplaninskom klasteru. Ovo je korisno zato što Köppen-Geiger ne koristi nadmorsku visinu direktno. Planinske klimatske razlike se zato mogu pojaviti samo posredno, kroz temperaturu i padavine.
+
 \subsection{Analiza sličnosti}
 Skor konzistentnosti vegetacije ocenjuje koliko se klimatski regioni poklapaju sa nezavisnim informacijama o zemljišnom pokrivaču. Drugo pitanje je da li predloženi algoritmi klasterovanja proizvode rešenja slična klasičnim centroidnim metodama klasterovanja. Ako je dobijeno klasterovanje veoma slično KMeans rešenju, dodatna složenost ACO okvira možda ne donosi značajnu praktičnu korist. U tu svrhu koristi se Adjusted Rand Index (ARI) \cite{hubert1985}.
 
@@ -665,13 +685,18 @@ ARI poredi dve različite particije istog skupa podataka. U ovom radu jednu part
 
 Za razliku od skora konzistentnosti vegetacije, ARI se ne koristi kao mera kvaliteta. Viši ARI ne znači nužno bolju klimatsku regionalizaciju. Umesto toga, on meri koliko je dobijeno klasterovanje slično KMeans rešenju.
 
-ARI je definisan kao
+ARI se u sažetom obliku može zapisati kao
 \[
 ARI=
 \frac{RI-E(RI)}
-{\max(RI)-E(RI)},
+{RI_{\mathrm{ref}}-E(RI)},
 \]
-gde je $RI$ Randov indeks, a $E(RI)$ njegova očekivana vrednost za dva slučajna klasterovanja.
+gde je $RI$ Randov indeks, a $E(RI)$ njegova očekivana vrednost za slučajne
+particije sa istim veličinama klastera. Član $RI_{\mathrm{ref}}$ označava
+standardnu ARI normalizacionu referencu. Ne treba ga tumačiti kao doslovnu
+maksimalnu vrednost Randovog indeksa; u kontingencionom obliku ARI-ja ova
+referenca zasniva se na prosečnom broju parova unutar klastera koje indukuju
+dve particije.
 
 ARI uzima vrednosti između -1 i 1. Vrednost ARI od 1 znači da su dva klasterovanja identična. Vrednost bliska 0 ukazuje na slaganje slično onome koje bi se očekivalo slučajno. Negativne vrednosti ukazuju na manje slaganje od očekivanog slučajem.
 
@@ -1153,16 +1178,16 @@ Najbolja metrika vegetacije & Centroid & ACO Centroid + Refinement & All ants & 
 \caption{Poređenje izabranih regionalizacija.}
 \label{tab:regionalization_summary}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lccccc}
+\begin{tabular}{lcccccc}
 \hline
-\textbf{Regionalizacija} & \textbf{Centroidni fitness} & \textbf{Silhouette fitness} & \textbf{SNN fitness} & \textbf{Metrika vegetacije} & \textbf{ARI} \\
+\textbf{Regionalizacija} & \textbf{Centroidni fitness} & \textbf{Silhouette fitness} & \textbf{SNN fitness} & \textbf{Metrika vegetacije} & \textbf{ARI prema KMeans} & \textbf{ARI prema Köppenu} \\
 \hline
-KMeans & 0.2376 & 0.3225 & 0.1651 & 0.4744 & 1.0000 \\
-Köppen-Geiger & 0.3679 & 0.4149 & 0.1062 & 0.4426 & 0.3558 \\
-Najbolji centroidni fitness & 0.2323 & 0.3306 & 0.1547 & 0.4810 & 0.4135 \\
-Najbolji silhouette fitness & 0.3919 & 0.2569 & 0.1008 & 0.4262 & 0.2559 \\
-Najbolji SNN fitness & 0.3797 & 0.2761 & 0.0854 & 0.4164 & 0.2226 \\
-Najbolja metrika vegetacije & 0.2648 & 0.3771 & 0.2086 & 0.4847 & 0.5848 \\
+KMeans & 0.2376 & 0.3225 & 0.1651 & 0.4744 & 1.0000 & 0.3558 \\
+Köppen-Geiger & 0.3679 & 0.4149 & 0.1062 & 0.4426 & 0.3558 & 1.0000 \\
+Najbolji centroidni fitness & 0.2323 & 0.3306 & 0.1547 & 0.4810 & 0.4135 & 0.2546 \\
+Najbolji silhouette fitness & 0.3919 & 0.2569 & 0.1008 & 0.4262 & 0.2559 & 0.3959 \\
+Najbolji SNN fitness & 0.3797 & 0.2761 & 0.0854 & 0.4164 & 0.2226 & 0.3028 \\
+Najbolja metrika vegetacije & 0.2648 & 0.3771 & 0.2086 & 0.4847 & 0.5848 & 0.2936 \\
 \hline
 \end{tabular}
 }
@@ -1178,6 +1203,12 @@ Rešenja sa najboljim silhouette i SNN fitness-om imaju niže vrednosti metrike 
 
 Silhouette i SNN mape vizuelno su dominirane jednim velikim regionom. Kako to utiče na kvalitet regionalizacije ne može se zaključiti samo iz prikaza. Mape će biti prosleđene klimatologu na vizuelnu procenu pre donošenja jačeg tumačenja.
 
+Statistika osobina podržava ovo tumačenje. Za svaku regionalizaciju, standardna devijacija svake Köppen-inspirisane osobine najpre je izračunata unutar svakog klastera, koristeći originalne vrednosti osobina. Te vrednosti su zatim uprosečene koristeći veličinu klastera kao težinu i podeljene standardnom devijacijom iste osobine preko svih čvorova. Niže vrednosti zato znače internu koherentnost klastera. KMeans, rešenje sa najboljim centroidnim fitness-om i rešenje sa najboljom metrikom vegetacije imaju najnižu normalizovanu unutarklastersku varijaciju, oko 0.39--0.43 za ukupne padavine i 0.43--0.46 za srednju temperaturu. Nasuprot tome, silhouette i SNN rešenja imaju veću unutrašnju temperaturnu varijaciju, sa normalizovanim vrednostima srednje temperature 0.72 i 0.68. Köppen-Geiger referenca ima najvišu unutrašnju varijaciju padavina, sa normalizovanom vrednošću ukupnih padavina 0.72.
+
+Nadmorska visina je takođe proverena kao nezavisni fizički sloj za validaciju. Raster nadmorske visine preuzet je iz GEDTM30 skupa podataka, distribuiranog preko OpenTopography platforme \cite{ho2025gedtm30data}. GEDTM30 je 30 m model terena bez vegetacije i objekata, nastao kombinovanjem više globalnih visinskih skupova podataka sa ICESat-2 i GEDI opažanjima \cite{ho2025gedtm30}. U ovom radu nadmorska visina se ne koristi tokom klasterovanja. Koristi se samo posle klasterovanja, da opiše da li su dobijeni regioni interno koherentni po visini terena. Za svaku regionalizaciju izračunata je standardna devijacija nadmorske visine unutar svakog klastera. Te vrednosti su zatim uprosečene koristeći veličinu klastera kao težinu. KMeans, rešenje sa najboljim centroidnim fitness-om i rešenje sa najboljom metrikom vegetacije imaju najnižu ponderisanu unutarklastersku varijaciju nadmorske visine, oko 202--210 m. Köppen-Geiger ima višu vrednost, 239 m. Silhouette i SNN rešenja imaju znatno više vrednosti, 302 m i 293 m. To ukazuje da su izabrana centroidna rešenja koherentnija i u odnosu na visinu terena.
+
+Poređenje pokazuje i razliku u načinu predstavljanja visokoplaninskih oblasti. Köppen-Geiger ima klaster sa veoma visokom prosečnom nadmorskom visinom, ali je njegov glavni klaster koji sadrži planinske piksele širok. Za piksele iznad 1000 m, samo 31.8\% tog klastera je iznad praga. Kod ACO rešenja izabranog prema metrici vegetacije, odgovarajući visokoplaninski klaster je koncentrisaniji, sa 57.4\% piksela iznad 1000 m.
+
 U celini, vizuelno poređenje pokazuje da predloženi optimizacioni okvir može da proizvede više različitih regionalizacija iz istih podataka. Najbolji izbor zavisi od toga da li je prioritet centroidna kompaktnost, silhouette separacija, grafovska sličnost ili metrika vegetacije.
 
 \section{Dalji rad}
@@ -1191,7 +1222,7 @@ Metrika konzistentnosti vegetacije razvijena u ovom radu mogla bi se uključiti 
 
 Još jedno moguće poboljšanje je razvoj mehanizama ažuriranja feromona koji su invarijantni na permutacije oznaka klastera. U trenutnoj implementaciji feromon je vezan za eksplicitne oznake klastera. Budući rad mogao bi da ispita reprezentacije koje pojačavaju ekvivalentna klasterovanja bez obzira na numeričke oznake dodeljene klasterima.
 
-Na kraju, predložena metodologija validacije mogla bi se proširiti uključivanjem dodatnih nezavisnih skupova podataka. Pored vegetacije, buduća istraživanja mogla bi da koriste nadmorsku visinu, karakteristike zemljišta ili druge ekološke promenljive pod uticajem klime. To bi omogućilo potpuniju procenu dobijenih klimatskih regionalizacija.
+Na kraju, predložena metodologija validacije mogla bi se proširiti uključivanjem dodatnih nezavisnih skupova podataka. Pored vegetacije i nadmorske visine, buduća istraživanja mogla bi da koriste karakteristike zemljišta ili druge ekološke promenljive pod uticajem klime. To bi omogućilo potpuniju procenu dobijenih klimatskih regionalizacija.
 
 \section{Zaključci}
 
@@ -1267,6 +1298,18 @@ Handl, J., Knowles, J., and Dorigo, M. (2006).
 Ant-based clustering and topographic mapping.
 \textit{Artificial Life}, 12(1), 35--61.
 https://doi.org/10.1162/106454606775186400
+
+\bibitem{ho2025gedtm30}
+Ho, Y.-F., Grohmann, C. H., Lindsay, J., Reuter, H. I., Parente, L., Witjes, M., and Hengl, T. (2025).
+Global ensemble digital terrain modeling and parametrization at 30 m resolution (GEDTM30): a data fusion approach based on ICESat-2, GEDI and multisource data.
+\textit{PeerJ}, 13, e19673.
+https://doi.org/10.7717/peerj.19673
+
+\bibitem{ho2025gedtm30data}
+Ho, Y.-F., and Hengl, T. (2025).
+Global ensemble digital terrain model 30m (GEDTM30), version v20250619.
+OpenTopography.
+https://doi.org/10.5069/G9BV7DT1
 
 \bibitem{hubert1985}
 Hubert, L., and Arabie, P. (1985).

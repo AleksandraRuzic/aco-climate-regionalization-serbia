@@ -82,6 +82,8 @@ The active fitness value and the ecological metric are related, but not uniforml
 
 Selected configurations were rerun with five seeds for multi-seed validation. The validation is mostly consistent with the main experiment. For centroid fitness, the best validated solution remains ACO Centroid for all feature representations. Silhouette fitness mostly supports the same centroid-based pattern. SNN fitness is more mixed: ACO Centroid is best for raw features, Multi-colony Centroid Graph Spatial is best for Köppen-inspired features, and Multi-colony Cohesion Graph Spatial is best for PCA features. The best ecological-metric configurations remain in the centroid or centroid-refinement family.
 
+Elevation from the GEDTM30 dataset was used as an additional check. KMeans, the best centroid-fitness solution, and the best vegetation-metric solution have the lowest within-cluster elevation variation. The silhouette and SNN solutions have higher variation, which supports the observation that they mix lowland and mountain areas more strongly.
+
 \section*{Conclusion}
 
 The results show that ACO is a viable framework for climate regionalization of Serbia. The selected ACO solutions improve on the reference regionalizations for their corresponding optimization objectives. The best ecological ACO solution also slightly improves on the KMeans baseline in weighted ecological consistency.

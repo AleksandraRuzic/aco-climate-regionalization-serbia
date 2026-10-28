@@ -111,7 +111,8 @@ Despite its widespread use, the Köppen-Geiger classification also has several l
 \begin{itemize}
   \item The classification is entirely rule-based. Every location is assigned to a climate class using predefined thresholds instead of optimizing the resulting regions according to a specific objective.
   \item The boundaries between climate classes are determined by fixed threshold values. Small differences in temperature or precipitation around these thresholds may result in different climate classes even though the climatic conditions are very similar.
-  \item Depending on the granularity of the map, rule-based classification might result in inconvinient small clusters, which can make the regionalization look fragmented and incoherent
+  \item The classification does not use topography, elevation or local terrain forms directly. Their effect is represented only indirectly through temperature and precipitation. Because of this, the system may miss local climate differences related to mountain areas, valleys or terrain exposure.
+  \item Depending on the granularity of the map, rule-based classification might result in inconvenient small clusters, which can make the regionalization look fragmented and incoherent.
 \end{itemize}
 
 The objective of this research is therefore not to replace the Köppen-Geiger classification as a universal climate classification system. Instead, it is used as a well-established reference against which the proposed optimization-based regionalization can be compared.
@@ -586,6 +587,16 @@ The following natural categories were used:
 
 Areas that had one of the agricultural classes were kept as a separate category. Unlike natural vegetation, agricultural land is strongly influenced by human management. However, different agricultural land cover classes still provide useful information about climate suitability.
 
+The following agricultural classes are present in the Serbia raster and are used in the agricultural component:
+\begin{itemize}
+  \item Non-irrigated arable land
+  \item Vineyards
+  \item Fruit trees and berry plantations
+  \item Pastures
+  \item Complex cultivation patterns
+  \item Land principally occupied by agriculture with significant areas of natural vegetation
+\end{itemize}
+
 Artificial surfaces were also identified separately. These areas mainly represent cities, roads and other built-up infrastructure. Their spatial distribution is determined mostly by human activity rather than climate. Artificial areas are therefore excluded from the vegetation consistency score. Their proportion is still reported as additional information.
 
 \subsubsection{Vegetation consistency of agricultural areas}
@@ -684,6 +695,16 @@ E
 Higher values indicate that the climate regions are more environmentally consistent.
 
 
+\subsection{External elevation-based validation}
+Elevation is used as an additional independent physical validation layer. It is not used during clustering. It is used only after clustering, to check whether the obtained regions are coherent in terrain height.
+
+The elevation raster comes from the GEDTM30 dataset, distributed by OpenTopography \cite{ho2025gedtm30data}. GEDTM30 is a 30 m bare-earth terrain model created from several global elevation datasets and ICESat-2/GEDI observations \cite{ho2025gedtm30}.
+
+The raster is sampled at the same valid climate pixels used in the clustering pipeline. Cluster labels are then mapped back to pixels using the pixel-to-node mapping described in preprocessing. For each regionalization, elevation is summarized inside every cluster. The main summary is the pooled within-cluster standard deviation of elevation. It is calculated by averaging cluster standard deviations using cluster size as weight. Lower values indicate that the regions are more internally coherent in terrain height.
+
+A second diagnostic is used for high-elevation terrain. Pixels above 1000 m are treated as high-elevation pixels. For each regionalization, the analysis checks how concentrated these pixels are inside the main high-elevation cluster. This is useful because Köppen-Geiger does not use elevation directly. Mountain-related climate differences can therefore appear only indirectly through temperature and precipitation.
+
+
 \subsection{Similarity analysis}
 The vegetation consistency score evaluates how well the climate regions correspond to independent land cover information. A different question is whether the proposed clustering algorithms produce solutions that are similar to classical centroid-based clustering methods. If the obtained clustering is very similar to the KMeans solution, the additional complexity introduced by the ACO framework may not provide significant practical benefits. For this purpose, the Adjusted Rand Index (ARI) is used \cite{hubert1985}.
 
@@ -691,15 +712,20 @@ The ARI compares two different partitions of the same dataset. In this work, one
 
 Unlike the vegetation consistency score, the ARI is not used as a quality measure. A higher ARI does not necessarily mean a better climate regionalization. Instead, it measures how similar the obtained clustering is to the KMeans solution.
 
-The ARI is defined as
+The ARI can be written in compact form as
 \[
 ARI=
 \frac{RI-E(RI)}
-{\max(RI)-E(RI)},
+{RI_{\mathrm{ref}}-E(RI)},
 \]
-where $RI$ is the Rand Index and $E(RI)$ is its expected value for two random clusterings.
+where $RI$ is the Rand Index and $E(RI)$ is its expected value for random
+partitions with the same cluster sizes. The term $RI_{\mathrm{ref}}$ denotes
+the standard ARI normalization reference. It should not be interpreted as a
+literal maximum value of the Rand Index; in the contingency-table form of ARI,
+this reference is based on the average number of same-cluster pairs induced by
+the two partitions.
 
-The ARI takes values between -1 and 1. An ARI value of 1 means that the two clusterings are identical. An ARI value close to 0 indicates that the agreement is similar to what would be expected by chance.Negative values indicate less agreement than expected by chance.
+The ARI takes values between -1 and 1. An ARI value of 1 means that the two clusterings are identical. An ARI value close to 0 indicates that the agreement is similar to what would be expected by chance. Negative values indicate less agreement than expected by chance.
 
 In this work, the ARI is used only to describe how much the proposed algorithms differ from KMeans. This helps determine whether the additional heuristics produce genuinely different climate regions or simply reproduce the centroid-based solution.
 
@@ -875,7 +901,7 @@ SNN & -0.663 & -0.782 & -0.865 & -0.781 \\
 \end{tabular}
 \end{table}
 
-The previous tables show correlations over the full configuration set. However, later analysis usually focuses on a smaller set of best configurations. For this reason, the same correlation was computed repeatedly over the best $N$ configurations.
+The correlation tables show correlations over the full configuration set. However, later analysis usually focuses on a smaller set of best configurations. For this reason, the same correlation was computed repeatedly over the best $N$ configurations.
 
 \begin{figure}[H]
     \centering
@@ -1183,16 +1209,16 @@ Best vegetation metric & Centroid & ACO Centroid + Refinement & All ants & 0.75 
 \caption{Comparison of the selected regionalizations.}
 \label{tab:regionalization_summary}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lccccc}
+\begin{tabular}{lcccccc}
 \hline
-\textbf{Regionalization} & \textbf{Centroid fitness} & \textbf{Silhouette fitness} & \textbf{SNN fitness} & \textbf{Vegetation metric} & \textbf{ARI} \\
+\textbf{Regionalization} & \textbf{Centroid fitness} & \textbf{Silhouette fitness} & \textbf{SNN fitness} & \textbf{Vegetation metric} & \textbf{ARI vs KMeans} & \textbf{ARI vs Köppen} \\
 \hline
-KMeans & 0.2376 & 0.3225 & 0.1651 & 0.4744 & 1.0000 \\
-Köppen-Geiger & 0.3679 & 0.4149 & 0.1062 & 0.4426 & 0.3558 \\
-Best centroid fitness & 0.2323 & 0.3306 & 0.1547 & 0.4810 & 0.4135 \\
-Best silhouette fitness & 0.3919 & 0.2569 & 0.1008 & 0.4262 & 0.2559 \\
-Best SNN fitness & 0.3797 & 0.2761 & 0.0854 & 0.4164 & 0.2226 \\
-Best vegetation metric & 0.2648 & 0.3771 & 0.2086 & 0.4847 & 0.5848 \\
+KMeans & 0.2376 & 0.3225 & 0.1651 & 0.4744 & 1.0000 & 0.3558 \\
+Köppen-Geiger & 0.3679 & 0.4149 & 0.1062 & 0.4426 & 0.3558 & 1.0000 \\
+Best centroid fitness & 0.2323 & 0.3306 & 0.1547 & 0.4810 & 0.4135 & 0.2546 \\
+Best silhouette fitness & 0.3919 & 0.2569 & 0.1008 & 0.4262 & 0.2559 & 0.3959 \\
+Best SNN fitness & 0.3797 & 0.2761 & 0.0854 & 0.4164 & 0.2226 & 0.3028 \\
+Best vegetation metric & 0.2648 & 0.3771 & 0.2086 & 0.4847 & 0.5848 & 0.2936 \\
 \hline
 \end{tabular}
 }
@@ -1208,6 +1234,12 @@ The best silhouette and SNN solutions have lower vegetation metric values. The b
 
 The silhouette and SNN maps are visually dominated by one large region. How this affects the quality of the regionalization cannot be concluded from the plots alone. The maps will be shared with a climatologist for visual inspection before making a stronger interpretation.
 
+The feature statistics support this interpretation. For each regionalization, the standard deviation of each Köppen-inspired feature was first calculated inside every cluster using the original feature values. These values were then averaged using cluster size as weight and divided by the standard deviation of the same feature over all nodes. Lower values therefore indicate more internally coherent clusters. KMeans, the best centroid-fitness solution and the best vegetation-metric solution have the lowest normalized within-cluster variation, with values around 0.39--0.43 for total precipitation and 0.43--0.46 for mean temperature. In contrast, the silhouette and SNN solutions have higher internal temperature variation, with normalized mean-temperature values of 0.72 and 0.68. The Köppen-Geiger reference has the highest internal precipitation variation, with a normalized total-precipitation value of 0.72.
+
+Elevation was also checked as an independent physical validation layer. The elevation raster was taken from the GEDTM30 dataset, distributed by OpenTopography \cite{ho2025gedtm30data}. GEDTM30 is a 30 m bare-earth terrain model created by combining several global elevation datasets with ICESat-2 and GEDI observations \cite{ho2025gedtm30}. In this work, elevation is not used during clustering. It is used only after clustering, to describe whether the obtained regions are internally coherent in terrain height. For each regionalization, the standard deviation of elevation was calculated inside every cluster. These values were then averaged using cluster size as weight. KMeans, the best centroid-fitness solution and the best vegetation-metric solution had the lowest pooled within-cluster elevation variation, around 202--210 m. Köppen-Geiger was higher at 239 m. The silhouette and SNN solutions were much higher, at 302 m and 293 m. This suggests that the selected centroid-based solutions are also more coherent with respect to terrain height.
+
+The comparison also shows a difference in how high-elevation areas are represented. Köppen-Geiger contains a very high-elevation cluster, but its main mountain-containing cluster is broad. For pixels above 1000 m, only 31.8\% of that cluster is above the threshold. In the best vegetation-metric ACO solution, the corresponding high-elevation cluster is more concentrated, with 57.4\% of its pixels above 1000 m.
+
 Overall, the visual comparison shows that the proposed optimization framework can produce several different regionalizations from the same data. The best choice depends on whether the priority is centroid compactness, silhouette separation, graph-based similarity or the vegetation metric.
 
 \section{Future work}
@@ -1221,7 +1253,7 @@ The vegetation consistency metric developed in this work could also be incorpora
 
 Another possible improvement is the development of pheromone update mechanisms that are invariant to cluster label permutations. In the current implementation, pheromone is associated with explicit cluster labels. Future work could investigate representations that reinforce equivalent clusterings regardless of the numerical labels assigned to the clusters.
 
-Finally, the proposed validation methodology could be extended by including additional independent datasets. Besides vegetation, future studies could investigate the use of elevation, soil characteristics or other environmental variables that are influenced by climate. This would provide a more complete assessment of the obtained climate regionalizations.
+Finally, the proposed validation methodology could be extended by including additional independent datasets. Besides vegetation and elevation, future studies could investigate the use of soil characteristics or other environmental variables that are influenced by climate. This would provide a more complete assessment of the obtained climate regionalizations.
 
 \section{Conclusions}
 
@@ -1298,6 +1330,18 @@ Handl, J., Knowles, J., and Dorigo, M. (2006).
 Ant-based clustering and topographic mapping.
 \textit{Artificial Life}, 12(1), 35--61.
 https://doi.org/10.1162/106454606775186400
+
+\bibitem{ho2025gedtm30}
+Ho, Y.-F., Grohmann, C. H., Lindsay, J., Reuter, H. I., Parente, L., Witjes, M., and Hengl, T. (2025).
+Global ensemble digital terrain modeling and parametrization at 30 m resolution (GEDTM30): a data fusion approach based on ICESat-2, GEDI and multisource data.
+\textit{PeerJ}, 13, e19673.
+https://doi.org/10.7717/peerj.19673
+
+\bibitem{ho2025gedtm30data}
+Ho, Y.-F., and Hengl, T. (2025).
+Global ensemble digital terrain model 30m (GEDTM30), version v20250619.
+OpenTopography.
+https://doi.org/10.5069/G9BV7DT1
 
 \bibitem{hubert1985}
 Hubert, L., and Arabie, P. (1985).
