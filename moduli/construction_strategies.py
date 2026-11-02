@@ -18,6 +18,7 @@ Each strategy must match the signature expected by AntClusteringOptimizer:
 
 from __future__ import annotations
 
+from typing import Optional
 
 import numpy as np
 
@@ -35,7 +36,42 @@ from .heuristics import (
     spatial_heuristic
 )
 
-    
+
+def _heuristic_context(
+    X: np.ndarray,
+    i: int,
+    labels: np.ndarray,
+    centroids: np.ndarray,
+    neighbors: Optional[np.ndarray],
+    n_clusters: int,
+    rng: np.random.Generator,
+) -> dict:
+    """Return the common partial-solution state available to heuristics."""
+    if neighbors is None:
+        neigh = np.empty(0, dtype=np.int64)
+    else:
+        neigh = neighbors[i]
+
+    neigh_labels = labels[neigh]
+    assigned_mask = neigh_labels >= 0
+    assigned_nodes = neigh[assigned_mask]
+    assigned_labels = neigh_labels[assigned_mask]
+
+    return {
+        "X": X,
+        "X_i": X[i],
+        "labels": labels,
+        "centroids": centroids,
+        "neighbors_i": neigh,
+        "assigned_nodes": assigned_nodes,
+        "assigned_labels": assigned_labels,
+        "X_neighbors": X[assigned_nodes],
+        "n_neighbours": len(neigh),
+        "n_clusters": n_clusters,
+        "rng": rng,
+    }
+
+
 def construct_aco_solution(
     X: np.ndarray,
     pheromone: np.ndarray,
@@ -45,22 +81,25 @@ def construct_aco_solution(
     ant_idx: int,
     n_ants: int,
     iteration: int,
+    heuristic_fn,
     neighbors: np.ndarray = None,
     alpha: float = 1.0,
-    beta_feature: float = 1.0,
-    centroid: bool = True
+    heuristic_params: Optional[dict] = None,
+    centroid_init: str = "zeros",
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Plain ACO-style constructive clustering.
 
     One ant builds one complete label assignment progressively.
 
-    Probability for assigning node i to cluster k is based on:
-        pheromone[i, k]^alpha
-        similarity to the temporary centroid of cluster k
+    Probability for assigning node i to cluster k combines
+    pheromone[i, k]^alpha with the supplied heuristic.
 
     This strategy does not use refinement steps.
     """
+    if not callable(heuristic_fn):
+        raise TypeError("heuristic_fn must be callable.")
+
     X = np.asarray(X, dtype=np.float64)
     weights = np.asarray(weights, dtype=np.float64)
 
@@ -70,7 +109,13 @@ def construct_aco_solution(
 
     cluster_sums = np.zeros((n_clusters, n_features), dtype=np.float64)
     cluster_weights = np.zeros(n_clusters, dtype=np.float64)
-    centroids = np.zeros((n_clusters, n_features), dtype=np.float64)
+    centroids = initialize_centroids(
+        X=X,
+        n_clusters=n_clusters,
+        rng=rng,
+        mode=centroid_init,
+    )
+    heuristic_params = {} if heuristic_params is None else heuristic_params
 
     order = rng.permutation(n_nodes)
 
@@ -81,29 +126,10 @@ def construct_aco_solution(
         tau = normalize_probabilities(pheromone_i)
         tau_score = np.power(tau + 1e-12, alpha)
 
-        context = {
-            "X_i": X[i],
-            "X": X,
-            "centroids": centroids,
-            "n_clusters": n_clusters,
-            "labels": labels,
-            "rng": rng,
-        }
-
-        if centroid:
-            heur = centroid_heuristic(
-                context,
-                {
-                    "beta_feature": beta_feature,
-                },
-            )
-        else:
-            heur = graph_cohesion_heuristic(
-                context,
-                {
-                    "beta_graph": beta_feature,
-                }
-            )
+        context = _heuristic_context(
+            X, i, labels, centroids, neighbors, n_clusters, rng,
+        )
+        heur = heuristic_fn(context, heuristic_params)
 
         probs = tau_score * heur
         probs = normalize_probabilities(probs)
@@ -136,11 +162,12 @@ def construct_aco_refinement_solution(
     ant_idx: int,
     n_ants: int,
     iteration: int,
+    heuristic_fn,
     neighbors: np.ndarray = None,
     alpha: float = 0.8,
-    beta_feature: float = 1.0,
     refinement_steps: int = 3,
-    centroid: bool = True
+    heuristic_params: Optional[dict] = None,
+    centroid_init: str = "zeros",
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     ACO + refinement-style construction.
@@ -148,14 +175,15 @@ def construct_aco_refinement_solution(
     One ant builds a complete clustering by repeatedly assigning nodes to
     competing cluster/colony centroids.
 
-    Probability for assigning node i to cluster k is based on:
-        pheromone[i, k]^alpha
-        either feature distance to centroid k or global cluster cohesion,
-        depending on the centroid flag.
+    Probability for assigning node i to cluster k combines
+    pheromone[i, k]^alpha with the supplied heuristic.
 
     Refinement:
         labels -> centroids -> labels -> centroids
     """
+    if not callable(heuristic_fn):
+        raise TypeError("heuristic_fn must be callable.")
+
     X = np.asarray(X, dtype=np.float64)
     weights = np.asarray(weights, dtype=np.float64)
 
@@ -163,7 +191,13 @@ def construct_aco_refinement_solution(
 
     labels = np.full(n_nodes, -1, dtype=np.int64)
     n_nodes, n_features = X.shape
-    centroids = np.zeros((n_clusters, n_features), dtype=np.float64)
+    centroids = initialize_centroids(
+        X=X,
+        n_clusters=n_clusters,
+        rng=rng,
+        mode=centroid_init,
+    )
+    heuristic_params = {} if heuristic_params is None else heuristic_params
     
     for step in range(refinement_steps):
         order = rng.permutation(n_nodes)
@@ -172,29 +206,10 @@ def construct_aco_refinement_solution(
 
         for i in order:
         
-            context = {
-                "X_i": X[i],
-                "X": X,
-                "centroids": centroids,
-                "n_clusters": n_clusters,
-                "labels": new_labels,
-                "rng": rng,
-            }
-            
-            if centroid:
-                heur = centroid_heuristic(
-                    context,
-                    {
-                        "beta_feature": beta_feature,
-                    },
-                )
-            else:
-                heur = graph_cohesion_heuristic(
-                    context,
-                    {
-                        "beta_graph": beta_feature,
-                    }
-                )
+            context = _heuristic_context(
+                X, i, new_labels, centroids, neighbors, n_clusters, rng,
+            )
+            heur = heuristic_fn(context, heuristic_params)
 
             tau = normalize_probabilities(pheromone[i])
             tau_score = np.power(tau + 1e-12, alpha)

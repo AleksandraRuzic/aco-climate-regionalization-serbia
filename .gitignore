@@ -30,6 +30,8 @@ experiments/results/
 *.toc
 *.lof
 *.lot
+*.nav
+*.snm
 
 # Generated PDFs
 *.pdf

@@ -98,7 +98,6 @@ from moduli.ant_clustering_optimizer import AntClusteringOptimizer
 
 from moduli.construction_strategies import (
     construct_aco_solution,
-    construct_graph_aco_solution,
     construct_aco_refinement_solution,
     construct_multicolony_solution,
 )
@@ -496,11 +495,8 @@ def build_algorithm_configs(beta: float) -> list[dict]:
     """
     Algorithm families included in the sweep.
 
-    Current construction convention:
-        construct_aco_solution(..., centroid=True)  = true centroid ACO
-        construct_aco_solution(..., centroid=False) = cohesion ACO
-        construct_aco_refinement_solution(..., centroid=True) = centroid refinement
-        construct_aco_refinement_solution(..., centroid=False)= cohesion refinement
+    ACO constructors are heuristic-agnostic. Each algorithm specifies its
+    heuristic explicitly in construct_kwargs.
     """
     configs = []
 
@@ -509,8 +505,8 @@ def build_algorithm_configs(beta: float) -> list[dict]:
         "construct_solution_fn": construct_aco_solution,
         "construct_kwargs": {
             "alpha": None,
-            "beta_feature": beta,
-            "centroid": True,
+            "heuristic_fn": centroid_heuristic,
+            "heuristic_params": {"beta_feature": beta},
         },
     })
 
@@ -519,8 +515,8 @@ def build_algorithm_configs(beta: float) -> list[dict]:
         "construct_solution_fn": construct_aco_solution,
         "construct_kwargs": {
             "alpha": None,
-            "beta_feature": beta,
-            "centroid": False,
+            "heuristic_fn": graph_cohesion_heuristic,
+            "heuristic_params": {"beta_graph": beta},
         },
     })
 
@@ -529,9 +525,9 @@ def build_algorithm_configs(beta: float) -> list[dict]:
         "construct_solution_fn": construct_aco_refinement_solution,
         "construct_kwargs": {
             "alpha": None,
-            "beta_feature": beta,
+            "heuristic_fn": centroid_heuristic,
+            "heuristic_params": {"beta_feature": beta},
             "refinement_steps": 3,
-            "centroid": True,
         },
     })
 
@@ -540,18 +536,32 @@ def build_algorithm_configs(beta: float) -> list[dict]:
         "construct_solution_fn": construct_aco_refinement_solution,
         "construct_kwargs": {
             "alpha": None,
-            "beta_feature": beta,
+            "heuristic_fn": graph_cohesion_heuristic,
+            "heuristic_params": {"beta_graph": beta},
             "refinement_steps": 3,
-            "centroid": False,
         },
     })
 
     configs.append({
         "algorithm": "aco_graph_local",
-        "construct_solution_fn": construct_graph_aco_solution,
+        "construct_solution_fn": construct_aco_solution,
         "construct_kwargs": {
             "alpha": None,
-            "beta_graph": beta,
+            "heuristic_fn": graph_heuristic,
+            "heuristic_params": {"beta_graph": beta},
+            "centroid_init": "kmeanspp",
+        },
+    })
+
+    configs.append({
+        "algorithm": "aco_graph_local_refinement",
+        "construct_solution_fn": construct_aco_refinement_solution,
+        "construct_kwargs": {
+            "alpha": None,
+            "heuristic_fn": graph_heuristic,
+            "heuristic_params": {"beta_graph": beta},
+            "centroid_init": "kmeanspp",
+            "refinement_steps": 3,
         },
     })
 
@@ -1058,6 +1068,12 @@ def parse_args():
         default="all",
         help="Comma-separated fitness functions to run: all, centroid, silhouette, snn.",
     )
+    parser.add_argument(
+        "--algorithms",
+        type=str,
+        default="all",
+        help="Comma-separated algorithms to run, or 'all'.",
+    )
 
     parser.add_argument("--results-path", type=str, default=None)
     parser.add_argument("--failures-path", type=str, default=None)
@@ -1086,6 +1102,11 @@ def main():
     qs = parse_float_list(args.qs)
     seeds = parse_int_list(args.seeds)
     fitness_names = parse_fitness_functions(args.fitness_functions)
+    requested_algorithms = [
+        name.strip()
+        for name in args.algorithms.split(",")
+        if name.strip()
+    ]
 
     result_paths = {
         name: resolve_fitness_result_path(args.results_path, args.feature_mode, name, RESULT_PATH)
@@ -1171,6 +1192,20 @@ def main():
             ],
         )
     )
+
+    available_algorithms = {cfg["algorithm"] for cfg in configs}
+    if requested_algorithms and requested_algorithms != ["all"]:
+        unknown_algorithms = sorted(set(requested_algorithms) - available_algorithms)
+        if unknown_algorithms:
+            raise ValueError(
+                "Unknown algorithm(s): "
+                f"{unknown_algorithms}. Available algorithms: "
+                f"{sorted(available_algorithms)}."
+            )
+        configs = [
+            cfg for cfg in configs
+            if cfg["algorithm"] in requested_algorithms
+        ]
 
     total_configs = len(configs)
 

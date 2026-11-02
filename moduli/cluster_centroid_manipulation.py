@@ -4,7 +4,7 @@ Centroid functions used for strategies with scores based on the distance from cl
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 from .strategy_utils import normalize_probabilities
 import numpy as np
 
@@ -115,11 +115,23 @@ def initialize_centroids(
     base_centroids: Optional[np.ndarray] = None,
     base_prob: float = 0.0,
     noise_scale: float = 0.05,
+    mode: Literal["base_or_kmeanspp", "kmeanspp", "zeros"] = "base_or_kmeanspp",
 ) -> np.ndarray:
     """
     Unified centroid initialization.
 
-    Behavior:
+    Modes:
+        "zeros":
+            return a zero matrix. This represents an uninitialized partial
+            solution during progressive construction.
+
+        "kmeanspp":
+            always use KMeans++ initialization.
+
+        "base_or_kmeanspp" (default):
+            preserve the original base-centroid/KMeans++ behavior below.
+
+    Base-centroid behavior:
         base_prob = 0.0:
             always use KMeans++ initialization
 
@@ -134,6 +146,21 @@ def initialize_centroids(
     If base_centroids is None, this always falls back to KMeans++.
     """
     X = np.asarray(X, dtype=np.float64)
+
+    if mode == "zeros":
+        return np.zeros((n_clusters, X.shape[1]), dtype=np.float64)
+
+    if mode == "kmeanspp":
+        return kmeanspp_centroids(
+            X=X,
+            n_clusters=n_clusters,
+            rng=rng,
+        )
+
+    if mode != "base_or_kmeanspp":
+        raise ValueError(
+            "mode must be 'base_or_kmeanspp', 'kmeanspp', or 'zeros'."
+        )
 
     if not 0.0 <= base_prob <= 1.0:
         raise ValueError("base_prob must be in [0, 1].")
@@ -165,4 +192,3 @@ def initialize_centroids(
         n_clusters=n_clusters,
         rng=rng,
     )
-

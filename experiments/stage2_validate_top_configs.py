@@ -87,7 +87,6 @@ from moduli.strategy_utils import normalize_probabilities
 from moduli.construction_strategies import (
     construct_aco_solution,
     construct_aco_refinement_solution,
-    construct_graph_aco_solution,
     construct_multicolony_solution,
 )
 
@@ -610,48 +609,55 @@ def construction_config(algorithm: str, alpha: float, beta: float):
     """
     Map algorithm names from the Stage 1 summary to construction functions.
 
-    Current convention:
-        construct_aco_solution(..., centroid=True)  -> true centroid ACO
-        construct_aco_solution(..., centroid=False) -> cohesion ACO
-        construct_aco_refinement_solution(..., centroid=True) -> centroid refinement
-        construct_aco_refinement_solution(..., centroid=False) -> cohesion refinement
-
-    Adjust this mapping if algorithm names in the Stage 1 summary change.
+    Heuristics are selected explicitly so the constructors remain
+    heuristic-agnostic. Adjust this mapping if algorithm names in the
+    Stage 1 summary change.
     """
     if algorithm == "aco_centroid":
         return construct_aco_solution, {
             "alpha": alpha,
-            "beta_feature": beta,
-            "centroid": True,
+            "heuristic_fn": centroid_heuristic,
+            "heuristic_params": {"beta_feature": beta},
         }
 
     if algorithm == "aco_centroid_refinement":
         return construct_aco_refinement_solution, {
             "alpha": alpha,
-            "beta_feature": beta,
+            "heuristic_fn": centroid_heuristic,
+            "heuristic_params": {"beta_feature": beta},
             "refinement_steps": 3,
-            "centroid": True,
         }
 
     if algorithm == "aco_cohesion":
         return construct_aco_solution, {
             "alpha": alpha,
-            "beta_feature": beta,
-            "centroid": False,
+            "heuristic_fn": graph_cohesion_heuristic,
+            "heuristic_params": {"beta_graph": beta},
         }
 
     if algorithm == "aco_cohesion_refinement":
         return construct_aco_refinement_solution, {
             "alpha": alpha,
-            "beta_feature": beta,
+            "heuristic_fn": graph_cohesion_heuristic,
+            "heuristic_params": {"beta_graph": beta},
             "refinement_steps": 3,
-            "centroid": False,
         }
 
     if algorithm == "aco_graph_local":
-        return construct_graph_aco_solution, {
+        return construct_aco_solution, {
             "alpha": alpha,
-            "beta_graph": beta,
+            "heuristic_fn": graph_heuristic,
+            "heuristic_params": {"beta_graph": beta},
+            "centroid_init": "kmeanspp",
+        }
+
+    if algorithm == "aco_graph_local_refinement":
+        return construct_aco_refinement_solution, {
+            "alpha": alpha,
+            "heuristic_fn": graph_heuristic,
+            "heuristic_params": {"beta_graph": beta},
+            "centroid_init": "kmeanspp",
+            "refinement_steps": 3,
         }
 
     if algorithm == "multi_centroid_graph_spatial":
